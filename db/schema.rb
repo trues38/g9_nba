@@ -10,17 +10,22 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_01_14_230502) do
+ActiveRecord::Schema[8.1].define(version: 2026_01_15_104202) do
   create_table "games", force: :cascade do |t|
     t.string "away_abbr"
     t.string "away_edge"
+    t.string "away_record"
+    t.string "away_road_record"
     t.decimal "away_spread"
     t.string "away_team"
     t.datetime "created_at", null: false
     t.string "external_id"
     t.datetime "game_date"
+    t.string "h2h_summary"
     t.string "home_abbr"
     t.string "home_edge"
+    t.string "home_home_record"
+    t.string "home_record"
     t.decimal "home_spread"
     t.string "home_team"
     t.integer "rest_days"

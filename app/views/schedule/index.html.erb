@@ -84,6 +84,9 @@
                 <div class="text-sm text-indigo-400 font-medium mt-1">
                   <%= game.away_spread.present? ? (game.away_spread > 0 ? "+#{game.away_spread}" : game.away_spread) : "-" %>
                 </div>
+                <% if game.away_record.present? %>
+                  <div class="text-[10px] text-gray-500 mt-1"><%= game.away_record %></div>
+                <% end %>
               </div>
 
               <!-- VS / Total -->
@@ -106,6 +109,9 @@
                 <div class="text-sm text-indigo-400 font-medium mt-1">
                   <%= game.home_spread.present? ? (game.home_spread > 0 ? "+#{game.home_spread}" : game.home_spread) : "-" %>
                 </div>
+                <% if game.home_record.present? %>
+                  <div class="text-[10px] text-gray-500 mt-1"><%= game.home_record %></div>
+                <% end %>
               </div>
             </div>
 
@@ -118,6 +124,35 @@
           <!-- Expanded Details (hidden by default) -->
           <div class="hidden border-t border-gray-800 light:border-gray-200 p-4 bg-gray-800/50 light:bg-gray-50"
                data-toggle-target="content">
+            <!-- Team Records -->
+            <% if game.away_record.present? || game.home_record.present? %>
+              <div class="mb-3 p-3 bg-gray-900/50 light:bg-gray-100 rounded-lg">
+                <div class="text-xs font-medium text-blue-400 mb-2">
+                  <iconify-icon icon="solar:chart-linear" width="12" class="mr-1"></iconify-icon>
+                  Season Record
+                </div>
+                <div class="grid grid-cols-3 gap-2 text-xs text-center">
+                  <div>
+                    <div class="text-white light:text-gray-900 font-bold"><%= game.away_record || '-' %></div>
+                    <div class="text-gray-500">Overall</div>
+                    <div class="text-gray-400 text-[10px]"><%= game.away_road_record ? "Away #{game.away_road_record}" : '' %></div>
+                  </div>
+                  <div>
+                    <% if game.h2h_summary.present? %>
+                      <div class="text-yellow-400 font-medium text-[10px]"><%= game.h2h_summary %></div>
+                    <% else %>
+                      <div class="text-gray-600">vs</div>
+                    <% end %>
+                  </div>
+                  <div>
+                    <div class="text-white light:text-gray-900 font-bold"><%= game.home_record || '-' %></div>
+                    <div class="text-gray-500">Overall</div>
+                    <div class="text-gray-400 text-[10px]"><%= game.home_home_record ? "Home #{game.home_home_record}" : '' %></div>
+                  </div>
+                </div>
+              </div>
+            <% end %>
+
             <!-- Venue -->
             <div class="text-sm text-gray-400 light:text-gray-500 mb-3">
               <iconify-icon icon="solar:map-point-linear" width="14" class="mr-1"></iconify-icon>
