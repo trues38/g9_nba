@@ -350,29 +350,24 @@ namespace :nba do
         next
       end
 
-      # Get starters (first 5 by position: PG, SG, SF, PF, C)
-      athletes = data.dig("athletes") || []
+      # Get all athletes from flat array
+      athletes = data["athletes"] || []
 
-      # Flatten all position groups
-      all_players = athletes.flat_map { |group| group["items"] || [] }
+      # Sort by salary/experience to get likely starters (top paid usually start)
+      sorted = athletes.sort_by { |p| -(p.dig("contract", "salary") || 0) }
 
-      # Sort by experience/status to get likely starters
+      # Pick top 5 by position balance (2 guards, 2 forwards, 1 center)
       starters = []
-      positions = ["PG", "SG", "SF", "PF", "C"]
+      guards = sorted.select { |p| p.dig("position", "abbreviation") == "G" }.first(2)
+      forwards = sorted.select { |p| p.dig("position", "abbreviation") == "F" }.first(2)
+      centers = sorted.select { |p| p.dig("position", "abbreviation") == "C" }.first(1)
 
-      positions.each do |pos|
-        player = all_players.find { |p|
-          p.dig("position", "abbreviation") == pos &&
-          !starters.include?(p)
+      (guards + forwards + centers).each do |player|
+        starters << {
+          "name" => player["displayName"],
+          "position" => player.dig("position", "abbreviation"),
+          "jersey" => player["jersey"]
         }
-        if player
-          starters << {
-            name: player["displayName"],
-            position: pos,
-            jersey: player["jersey"],
-            headshot: player.dig("headshot", "href")
-          }
-        end
       end
 
       lineups_by_team[abbr] = starters
