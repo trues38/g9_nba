@@ -1,4 +1,4 @@
-<div class="px-4 py-4">
+<div class="px-4 py-4" data-controller="auto-refresh" data-auto-refresh-interval-value="60">
   <!-- Date Navigation -->
   <div class="flex items-center justify-between mb-4">
     <%= link_to schedule_index_index_path(sport: current_sport&.slug, date: @yesterday, filter: @filter),
