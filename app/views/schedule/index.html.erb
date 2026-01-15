@@ -50,13 +50,19 @@
   <% if @games.any? %>
     <div class="space-y-3">
       <% @games.each do |game| %>
-        <div class="bg-gray-900 light:bg-white rounded-xl border border-gray-800 light:border-gray-200 light:shadow-sm overflow-hidden"
+        <% status = game_status(game) %>
+        <div class="<%= status == :finished ? 'opacity-50' : '' %> bg-gray-900 light:bg-white rounded-xl border border-gray-800 light:border-gray-200 light:shadow-sm overflow-hidden"
              data-controller="toggle">
           <!-- Main Card (clickable) -->
           <div class="p-4 cursor-pointer" data-action="click->toggle#toggle">
-            <!-- Time -->
-            <div class="text-center text-xs text-gray-500 mb-3">
-              <%= game.game_date.in_time_zone("Asia/Seoul").strftime("%H:%M") %> KST
+            <!-- Time & Status -->
+            <div class="text-center text-xs mb-3 flex items-center justify-center gap-2">
+              <span class="text-gray-500"><%= game.game_date.in_time_zone("Asia/Seoul").strftime("%H:%M") %> KST</span>
+              <% if status == :live %>
+                <span class="px-2 py-0.5 bg-red-500 text-white rounded-full text-[10px] font-bold animate-pulse">LIVE</span>
+              <% elsif status == :finished %>
+                <span class="px-2 py-0.5 bg-gray-600 text-gray-300 rounded-full text-[10px]">종료</span>
+              <% end %>
             </div>
 
             <!-- Teams with Spread -->

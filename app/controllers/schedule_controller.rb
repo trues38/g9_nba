@@ -17,9 +17,26 @@ class ScheduleController < ApplicationController
     start_of_day = @selected_date.in_time_zone("Asia/Seoul").beginning_of_day
     end_of_day = @selected_date.in_time_zone("Asia/Seoul").end_of_day
 
+    now = Time.current.in_time_zone("Asia/Seoul")
+
     @games = current_sport.games
                           .where(game_date: start_of_day..end_of_day)
                           .order(:game_date)
+                          .to_a
+
+    # Sort: upcoming first, then live, then finished
+    @games = @games.sort_by do |game|
+      game_time = game.game_date.in_time_zone("Asia/Seoul")
+      game_end_estimate = game_time + 2.5.hours # NBA game ~2.5 hours
+
+      if now < game_time
+        [0, game_time] # Upcoming - sort by time
+      elsif now >= game_time && now < game_end_estimate
+        [1, game_time] # Live
+      else
+        [2, game_time] # Finished
+      end
+    end
 
     # Filter by edge type
     @filter = params[:filter] || "all"
