@@ -2,7 +2,7 @@
 service: gate9_sports
 
 # Name of the container image (use your-user/app-name on external registries).
-image: jaeseonglee/gate9_sports
+image: trues38/gate9_sports
 
 # Deploy to these servers.
 servers:
@@ -24,13 +24,15 @@ servers:
 #   ssl: true
 #   host: app.example.com
 
-# Where you keep your container images.
-# Using GitHub Container Registry (free)
+# GitHub Container Registry
 registry:
   server: ghcr.io
-  username: jaeseonglee
+  username: trues38
   password:
     - KAMAL_REGISTRY_PASSWORD
+
+builder:
+  arch: amd64
 
 # Inject ENV variables into containers (secrets come from .kamal/secrets).
 env:
