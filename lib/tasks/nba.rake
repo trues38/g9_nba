@@ -316,8 +316,79 @@ namespace :nba do
     puts "Saved to #{cache_path}"
   end
 
-  desc "Fetch all ESPN data (odds + injuries)"
-  task fetch_all: [:fetch_odds, :fetch_injuries] do
+  desc "Fetch projected lineups from ESPN"
+  task fetch_lineups: :environment do
+    require 'net/http'
+    require 'json'
+
+    puts "Fetching projected lineups from ESPN..."
+
+    team_ids = {
+      "ATL" => 1, "BOS" => 2, "BKN" => 17, "CHA" => 30, "CHI" => 4,
+      "CLE" => 5, "DAL" => 6, "DEN" => 7, "DET" => 8, "GSW" => 9,
+      "HOU" => 10, "IND" => 11, "LAC" => 12, "LAL" => 13, "MEM" => 29,
+      "MIA" => 14, "MIL" => 15, "MIN" => 16, "NOP" => 3, "NYK" => 18,
+      "OKC" => 25, "ORL" => 19, "PHI" => 20, "PHX" => 21, "POR" => 22,
+      "SAC" => 23, "SAS" => 24, "TOR" => 28, "UTA" => 26, "WAS" => 27
+    }
+
+    lineups_by_team = {}
+
+    team_ids.each do |abbr, team_id|
+      uri = URI("https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/#{team_id}/roster")
+
+      begin
+        http = Net::HTTP.new(uri.host, uri.port)
+        http.use_ssl = true
+        http.verify_mode = OpenSSL::SSL::VERIFY_NONE
+        request = Net::HTTP::Get.new(uri)
+        request["User-Agent"] = "Mozilla/5.0"
+        response = http.request(request)
+        data = JSON.parse(response.body)
+      rescue => e
+        puts "Error fetching #{abbr}: #{e.message}"
+        next
+      end
+
+      # Get starters (first 5 by position: PG, SG, SF, PF, C)
+      athletes = data.dig("athletes") || []
+
+      # Flatten all position groups
+      all_players = athletes.flat_map { |group| group["items"] || [] }
+
+      # Sort by experience/status to get likely starters
+      starters = []
+      positions = ["PG", "SG", "SF", "PF", "C"]
+
+      positions.each do |pos|
+        player = all_players.find { |p|
+          p.dig("position", "abbreviation") == pos &&
+          !starters.include?(p)
+        }
+        if player
+          starters << {
+            name: player["displayName"],
+            position: pos,
+            jersey: player["jersey"],
+            headshot: player.dig("headshot", "href")
+          }
+        end
+      end
+
+      lineups_by_team[abbr] = starters
+      print "."
+    end
+
+    # Save to tmp
+    cache_path = Rails.root.join("tmp", "lineups.json")
+    File.write(cache_path, JSON.pretty_generate(lineups_by_team))
+
+    puts "\nCached lineups for #{lineups_by_team.keys.count} teams"
+    puts "Saved to #{cache_path}"
+  end
+
+  desc "Fetch all ESPN data (odds + injuries + lineups)"
+  task fetch_all: [:fetch_odds, :fetch_injuries, :fetch_lineups] do
     puts "\nAll ESPN data updated!"
   end
 end
