@@ -168,29 +168,31 @@
                 </div>
                 <div class="grid grid-cols-2 gap-4 text-xs">
                   <div>
-                    <% away_lineup.each do |player| %>
-                      <div class="text-gray-400 light:text-gray-600 flex justify-between items-center">
-                        <span class="<%= player['status'] == 'OUT' ? 'text-red-400 line-through' : 'text-white light:text-gray-900' %>">
-                          <%= player["name"] %>
-                          <% if player["status"].present? %>
-                            <span class="<%= player['status'] == 'OUT' ? 'text-red-400' : 'text-orange-400' %> text-[10px]">(<%= player["status"] %>)</span>
-                          <% end %>
-                        </span>
-                        <span class="text-gray-500 ml-1"><%= player["position"] %></span>
-                      </div>
+                    <% if away_lineup.any? %>
+                      <% away_lineup.each do |player| %>
+                        <div class="flex justify-between items-center">
+                          <span class="<%= player['status'] == 'OUT' ? 'text-red-400 line-through' : 'text-white light:text-gray-900' %>">
+                            <%= player["name"] %><% if player["status"].present? %><span class="<%= player['status'] == 'OUT' ? 'text-red-400' : 'text-orange-400' %> text-[10px] ml-1">(<%= player["status"] %>)</span><% end %>
+                          </span>
+                          <span class="text-gray-500 ml-1"><%= player["position"] %></span>
+                        </div>
+                      <% end %>
+                    <% else %>
+                      <span class="text-gray-600">TBD</span>
                     <% end %>
                   </div>
                   <div>
-                    <% home_lineup.each do |player| %>
-                      <div class="text-gray-400 light:text-gray-600 flex justify-between items-center">
-                        <span class="<%= player['status'] == 'OUT' ? 'text-red-400 line-through' : 'text-white light:text-gray-900' %>">
-                          <%= player["name"] %>
-                          <% if player["status"].present? %>
-                            <span class="<%= player['status'] == 'OUT' ? 'text-red-400' : 'text-orange-400' %> text-[10px]">(<%= player["status"] %>)</span>
-                          <% end %>
-                        </span>
-                        <span class="text-gray-500 ml-1"><%= player["position"] %></span>
-                      </div>
+                    <% if home_lineup.any? %>
+                      <% home_lineup.each do |player| %>
+                        <div class="flex justify-between items-center">
+                          <span class="<%= player['status'] == 'OUT' ? 'text-red-400 line-through' : 'text-white light:text-gray-900' %>">
+                            <%= player["name"] %><% if player["status"].present? %><span class="<%= player['status'] == 'OUT' ? 'text-red-400' : 'text-orange-400' %> text-[10px] ml-1">(<%= player["status"] %>)</span><% end %>
+                          </span>
+                          <span class="text-gray-500 ml-1"><%= player["position"] %></span>
+                        </div>
+                      <% end %>
+                    <% else %>
+                      <span class="text-gray-600">TBD</span>
                     <% end %>
                   </div>
                 </div>
