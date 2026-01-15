@@ -316,69 +316,128 @@ namespace :nba do
     puts "Saved to #{cache_path}"
   end
 
-  desc "Fetch projected lineups from ESPN"
+  desc "Fetch projected lineups from BasketballMonster"
   task fetch_lineups: :environment do
     require 'net/http'
-    require 'json'
+    require 'nokogiri'
 
-    puts "Fetching projected lineups from ESPN..."
+    puts "Fetching projected lineups from BasketballMonster..."
 
-    team_ids = {
-      "ATL" => 1, "BOS" => 2, "BKN" => 17, "CHA" => 30, "CHI" => 4,
-      "CLE" => 5, "DAL" => 6, "DEN" => 7, "DET" => 8, "GSW" => 9,
-      "HOU" => 10, "IND" => 11, "LAC" => 12, "LAL" => 13, "MEM" => 29,
-      "MIA" => 14, "MIL" => 15, "MIN" => 16, "NOP" => 3, "NYK" => 18,
-      "OKC" => 25, "ORL" => 19, "PHI" => 20, "PHX" => 21, "POR" => 22,
-      "SAC" => 23, "SAS" => 24, "TOR" => 28, "UTA" => 26, "WAS" => 27
-    }
+    uri = URI("https://basketballmonster.com/nbalineups.aspx")
 
+    begin
+      http = Net::HTTP.new(uri.host, uri.port)
+      http.use_ssl = true
+      http.verify_mode = OpenSSL::SSL::VERIFY_NONE
+      http.read_timeout = 30
+      request = Net::HTTP::Get.new(uri)
+      request["User-Agent"] = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
+      response = http.request(request)
+      html = response.body
+    rescue => e
+      puts "Error fetching lineups: #{e.message}"
+      exit
+    end
+
+    doc = Nokogiri::HTML(html)
     lineups_by_team = {}
 
-    team_ids.each do |abbr, team_id|
-      uri = URI("https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/#{team_id}/roster")
+    # Team abbreviation mapping (BasketballMonster uses some different abbrs)
+    team_map = {
+      "PHO" => "PHX", "SA" => "SAS", "NO" => "NOP", "NY" => "NYK", "GS" => "GSW"
+    }
 
-      begin
-        http = Net::HTTP.new(uri.host, uri.port)
-        http.use_ssl = true
-        http.verify_mode = OpenSSL::SSL::VERIFY_NONE
-        request = Net::HTTP::Get.new(uri)
-        request["User-Agent"] = "Mozilla/5.0"
-        response = http.request(request)
-        data = JSON.parse(response.body)
-      rescue => e
-        puts "Error fetching #{abbr}: #{e.message}"
-        next
+    positions = %w[PG SG SF PF C]
+
+    # Each table.datatable represents one game
+    doc.css("table.datatable").each do |game_table|
+      rows = game_table.css("tr")
+      next if rows.length < 3
+
+      # Row 1: header with team names (e.g., " | MEM | @ ORL") - uses th elements
+      header_row = rows[1]
+      cells = header_row.css("td, th")
+      next if cells.length < 3
+
+      away_abbr = cells[1].text.strip.upcase
+      home_text = cells[2].text.strip.upcase
+      home_abbr = home_text.gsub(/^@\s*/, "")
+
+      # Apply abbreviation mapping
+      away_abbr = team_map[away_abbr] || away_abbr
+      home_abbr = team_map[home_abbr] || home_abbr
+
+      lineups_by_team[away_abbr] ||= []
+      lineups_by_team[home_abbr] ||= []
+
+      # Rows 2-6: PG, SG, SF, PF, C
+      positions.each_with_index do |pos, idx|
+        row = rows[idx + 2]
+        next unless row
+
+        cells = row.css("td")
+        next if cells.length < 3
+
+        # Away player (column 1)
+        away_cell = cells[1]
+        away_player = away_cell.at_css("a")&.text&.strip
+        away_status = nil
+        if away_cell.text.include?("Off Inj")
+          away_status = "OUT"
+        elsif away_cell.text.match?(/\bQ\b/)
+          away_status = "Q"
+        elsif away_cell.text.match?(/\bP\b/)
+          away_status = "P"
+        elsif away_cell.text.match?(/\bGTD\b/i)
+          away_status = "GTD"
+        end
+
+        if away_player.present?
+          lineups_by_team[away_abbr] << {
+            "name" => away_player,
+            "position" => pos,
+            "status" => away_status
+          }
+        end
+
+        # Home player (column 2)
+        home_cell = cells[2]
+        home_player = home_cell.at_css("a")&.text&.strip
+        home_status = nil
+        if home_cell.text.include?("Off Inj")
+          home_status = "OUT"
+        elsif home_cell.text.match?(/\bQ\b/)
+          home_status = "Q"
+        elsif home_cell.text.match?(/\bP\b/)
+          home_status = "P"
+        elsif home_cell.text.match?(/\bGTD\b/i)
+          home_status = "GTD"
+        end
+
+        if home_player.present?
+          lineups_by_team[home_abbr] << {
+            "name" => home_player,
+            "position" => pos,
+            "status" => home_status
+          }
+        end
       end
-
-      # Get all athletes from flat array
-      athletes = data["athletes"] || []
-
-      # Sort by salary/experience to get likely starters (top paid usually start)
-      sorted = athletes.sort_by { |p| -(p.dig("contract", "salary") || 0) }
-
-      # Pick top 5 by position balance (2 guards, 2 forwards, 1 center)
-      starters = []
-      guards = sorted.select { |p| p.dig("position", "abbreviation") == "G" }.first(2)
-      forwards = sorted.select { |p| p.dig("position", "abbreviation") == "F" }.first(2)
-      centers = sorted.select { |p| p.dig("position", "abbreviation") == "C" }.first(1)
-
-      (guards + forwards + centers).each do |player|
-        starters << {
-          "name" => player["displayName"],
-          "position" => player.dig("position", "abbreviation"),
-          "jersey" => player["jersey"]
-        }
-      end
-
-      lineups_by_team[abbr] = starters
-      print "."
     end
 
     # Save to tmp
     cache_path = Rails.root.join("tmp", "lineups.json")
-    File.write(cache_path, JSON.pretty_generate(lineups_by_team))
 
-    puts "\nCached lineups for #{lineups_by_team.keys.count} teams"
+    if lineups_by_team.any?
+      File.write(cache_path, JSON.pretty_generate(lineups_by_team))
+      puts "Cached lineups for #{lineups_by_team.keys.count} teams playing today"
+      lineups_by_team.each do |team, players|
+        starters = players.map { |p| "#{p['position']}:#{p['name']}#{p['status'] ? "(#{p['status']})" : ""}" }.join(", ")
+        puts "  #{team}: #{starters}"
+      end
+    else
+      puts "Warning: No lineups parsed. Page structure may have changed."
+    end
+
     puts "Saved to #{cache_path}"
   end
 
