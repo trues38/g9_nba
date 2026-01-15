@@ -169,17 +169,27 @@
                 <div class="grid grid-cols-2 gap-4 text-xs">
                   <div>
                     <% away_lineup.each do |player| %>
-                      <div class="text-gray-400 light:text-gray-600 flex justify-between">
-                        <span class="text-white light:text-gray-900"><%= player["name"] %></span>
-                        <span class="text-gray-500"><%= player["position"] %></span>
+                      <div class="text-gray-400 light:text-gray-600 flex justify-between items-center">
+                        <span class="<%= player['status'] == 'OUT' ? 'text-red-400 line-through' : 'text-white light:text-gray-900' %>">
+                          <%= player["name"] %>
+                          <% if player["status"].present? %>
+                            <span class="<%= player['status'] == 'OUT' ? 'text-red-400' : 'text-orange-400' %> text-[10px]">(<%= player["status"] %>)</span>
+                          <% end %>
+                        </span>
+                        <span class="text-gray-500 ml-1"><%= player["position"] %></span>
                       </div>
                     <% end %>
                   </div>
                   <div>
                     <% home_lineup.each do |player| %>
-                      <div class="text-gray-400 light:text-gray-600 flex justify-between">
-                        <span class="text-white light:text-gray-900"><%= player["name"] %></span>
-                        <span class="text-gray-500"><%= player["position"] %></span>
+                      <div class="text-gray-400 light:text-gray-600 flex justify-between items-center">
+                        <span class="<%= player['status'] == 'OUT' ? 'text-red-400 line-through' : 'text-white light:text-gray-900' %>">
+                          <%= player["name"] %>
+                          <% if player["status"].present? %>
+                            <span class="<%= player['status'] == 'OUT' ? 'text-red-400' : 'text-orange-400' %> text-[10px]">(<%= player["status"] %>)</span>
+                          <% end %>
+                        </span>
+                        <span class="text-gray-500 ml-1"><%= player["position"] %></span>
                       </div>
                     <% end %>
                   </div>
