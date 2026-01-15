@@ -57,48 +57,53 @@
              data-controller="toggle">
           <!-- Main Card (clickable) -->
           <div class="p-4 cursor-pointer" data-action="click->toggle#toggle">
-            <!-- Time, Status & Edge Tags -->
-            <div class="text-center text-xs mb-3 flex items-center justify-center gap-2 flex-wrap">
+            <!-- Time & Status (centered) -->
+            <div class="text-center text-xs mb-3">
               <% if I18n.locale == :ko %>
                 <span class="text-gray-500"><%= game.game_date.in_time_zone("Asia/Seoul").strftime("%H:%M") %> KST</span>
               <% else %>
                 <span class="text-gray-500"><%= game.game_date.in_time_zone("America/New_York").strftime("%I:%M %p") %> ET</span>
               <% end %>
               <% if status == :live %>
-                <span class="px-2 py-0.5 bg-red-500 text-white rounded-full text-[10px] font-bold animate-pulse">LIVE</span>
+                <span class="ml-2 px-2 py-0.5 bg-red-500 text-white rounded-full text-[10px] font-bold animate-pulse">LIVE</span>
               <% elsif status == :finished %>
-                <span class="px-2 py-0.5 bg-gray-600 text-gray-300 rounded-full text-[10px]"><%= I18n.locale == :ko ? '종료' : 'Final' %></span>
-              <% end %>
-              <% if game.away_edge.present? %>
-                <span class="px-2 py-0.5 bg-red-500/20 text-red-400 rounded-full text-[10px]"><%= game.away_abbr %> <%= game.away_edge %></span>
-              <% end %>
-              <% if game.home_edge.present? %>
-                <span class="px-2 py-0.5 bg-red-500/20 text-red-400 rounded-full text-[10px]"><%= game.home_abbr %> <%= game.home_edge %></span>
+                <span class="ml-2 px-2 py-0.5 bg-gray-600 text-gray-300 rounded-full text-[10px]"><%= I18n.locale == :ko ? '종료' : 'Final' %></span>
               <% end %>
             </div>
 
-            <!-- Teams with Spread -->
-            <div class="flex items-center justify-between">
+            <!-- Teams with Edge & Spread -->
+            <div class="flex items-start">
               <!-- Away Team -->
               <div class="flex-1 text-center">
+                <div class="h-5 mb-1">
+                  <% if game.away_edge.present? %>
+                    <span class="px-2 py-0.5 bg-red-500/20 text-red-400 rounded-full text-[10px]"><%= game.away_edge %></span>
+                  <% end %>
+                </div>
                 <div class="text-xl font-bold light:text-gray-900"><%= game.away_abbr %></div>
-                <div class="text-sm text-indigo-400 font-medium mt-1 h-5">
+                <div class="text-sm text-indigo-400 font-medium mt-1">
                   <%= game.away_spread.present? ? (game.away_spread > 0 ? "+#{game.away_spread}" : game.away_spread) : "-" %>
                 </div>
               </div>
 
               <!-- VS / Total -->
               <div class="px-3 text-center">
+                <div class="h-5 mb-1"></div>
                 <div class="text-gray-600">@</div>
-                <div class="text-xs text-gray-500 mt-1 h-5">
+                <div class="text-xs text-gray-500 mt-1">
                   <%= game.total_line.present? ? "O/U #{game.total_line}" : "-" %>
                 </div>
               </div>
 
               <!-- Home Team -->
               <div class="flex-1 text-center">
+                <div class="h-5 mb-1">
+                  <% if game.home_edge.present? %>
+                    <span class="px-2 py-0.5 bg-red-500/20 text-red-400 rounded-full text-[10px]"><%= game.home_edge %></span>
+                  <% end %>
+                </div>
                 <div class="text-xl font-bold light:text-gray-900"><%= game.home_abbr %></div>
-                <div class="text-sm text-indigo-400 font-medium mt-1 h-5">
+                <div class="text-sm text-indigo-400 font-medium mt-1">
                   <%= game.home_spread.present? ? (game.home_spread > 0 ? "+#{game.home_spread}" : game.home_spread) : "-" %>
                 </div>
               </div>
