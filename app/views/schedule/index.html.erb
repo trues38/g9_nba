@@ -1,0 +1,178 @@
+<div class="px-4 py-4">
+  <!-- Date Navigation -->
+  <div class="flex items-center justify-between mb-4">
+    <%= link_to schedule_index_index_path(sport: current_sport&.slug, date: @yesterday, filter: @filter),
+        class: "p-2 rounded-lg bg-gray-800 light:bg-gray-100" do %>
+      <iconify-icon icon="solar:arrow-left-linear" width="20" class="text-gray-400"></iconify-icon>
+    <% end %>
+
+    <div class="text-center">
+      <div class="text-lg font-bold light:text-gray-900">
+        <% if @selected_date == Date.current %>
+          <%= t('schedule.today', default: 'Today') %>
+        <% elsif @selected_date == Date.current - 1.day %>
+          <%= t('schedule.yesterday', default: 'Yesterday') %>
+        <% elsif @selected_date == Date.current + 1.day %>
+          <%= t('schedule.tomorrow', default: 'Tomorrow') %>
+        <% else %>
+          <%= @selected_date.strftime("%m/%d") %>
+        <% end %>
+      </div>
+      <div class="text-xs text-gray-500"><%= @selected_date.strftime("%Y.%m.%d (%a)") %></div>
+    </div>
+
+    <%= link_to schedule_index_index_path(sport: current_sport&.slug, date: @tomorrow, filter: @filter),
+        class: "p-2 rounded-lg bg-gray-800 light:bg-gray-100" do %>
+      <iconify-icon icon="solar:arrow-right-linear" width="20" class="text-gray-400"></iconify-icon>
+    <% end %>
+  </div>
+
+  <!-- Quick Date Tabs -->
+  <div class="flex gap-2 mb-4 justify-center">
+    <% [
+      [Date.current - 1.day, t('schedule.yesterday', default: 'Yesterday')],
+      [Date.current, t('schedule.today', default: 'Today')],
+      [Date.current + 1.day, t('schedule.tomorrow', default: 'Tomorrow')]
+    ].each do |date, label| %>
+      <%= link_to schedule_index_index_path(sport: current_sport&.slug, date: date, filter: @filter),
+          class: "px-4 py-2 rounded-full text-sm #{@selected_date == date ? 'bg-indigo-600 text-white' : 'bg-gray-800 light:bg-gray-100 text-gray-400 light:text-gray-600'}" do %>
+        <%= label %>
+      <% end %>
+    <% end %>
+  </div>
+
+  <!-- Games Count -->
+  <div class="text-center text-sm text-gray-500 mb-4">
+    <%= @total_games %> <%= t('schedule.games', default: 'games') %>
+  </div>
+
+  <!-- Games List -->
+  <% if @games.any? %>
+    <div class="space-y-3">
+      <% @games.each do |game| %>
+        <div class="bg-gray-900 light:bg-white rounded-xl border border-gray-800 light:border-gray-200 light:shadow-sm overflow-hidden"
+             data-controller="toggle">
+          <!-- Main Card (clickable) -->
+          <div class="p-4 cursor-pointer" data-action="click->toggle#toggle">
+            <!-- Time -->
+            <div class="text-center text-xs text-gray-500 mb-3">
+              <%= game.game_date.in_time_zone("Asia/Seoul").strftime("%H:%M") %> KST
+            </div>
+
+            <!-- Teams with Spread -->
+            <div class="flex items-center justify-between">
+              <!-- Away Team -->
+              <div class="flex-1 text-center">
+                <div class="text-xl font-bold light:text-gray-900"><%= game.away_abbr %></div>
+                <% if game.away_spread.present? %>
+                  <div class="text-sm text-indigo-400 font-medium mt-1">
+                    <%= game.away_spread > 0 ? "+#{game.away_spread}" : game.away_spread %>
+                  </div>
+                <% end %>
+                <% if game.away_edge.present? %>
+                  <span class="inline-block mt-1 px-2 py-0.5 bg-red-500/20 text-red-400 text-xs rounded-full">
+                    <%= game.away_edge %>
+                  </span>
+                <% end %>
+              </div>
+
+              <!-- VS / Total -->
+              <div class="px-3 text-center">
+                <div class="text-gray-600">@</div>
+                <% if game.total_line.present? %>
+                  <div class="text-xs text-gray-500 mt-1">O/U <%= game.total_line %></div>
+                <% end %>
+              </div>
+
+              <!-- Home Team -->
+              <div class="flex-1 text-center">
+                <div class="text-xl font-bold light:text-gray-900"><%= game.home_abbr %></div>
+                <% if game.home_spread.present? %>
+                  <div class="text-sm text-indigo-400 font-medium mt-1">
+                    <%= game.home_spread > 0 ? "+#{game.home_spread}" : game.home_spread %>
+                  </div>
+                <% end %>
+                <% if game.home_edge.present? %>
+                  <span class="inline-block mt-1 px-2 py-0.5 bg-red-500/20 text-red-400 text-xs rounded-full">
+                    <%= game.home_edge %>
+                  </span>
+                <% end %>
+              </div>
+            </div>
+
+            <!-- Expand indicator -->
+            <div class="text-center mt-3">
+              <iconify-icon icon="solar:alt-arrow-down-linear" width="16" class="text-gray-600"></iconify-icon>
+            </div>
+          </div>
+
+          <!-- Expanded Details (hidden by default) -->
+          <div class="hidden border-t border-gray-800 light:border-gray-200 p-4 bg-gray-800/50 light:bg-gray-50"
+               data-toggle-target="content">
+            <!-- Venue -->
+            <div class="text-sm text-gray-400 light:text-gray-500 mb-3">
+              <iconify-icon icon="solar:map-point-linear" width="14" class="mr-1"></iconify-icon>
+              <%= game.venue %>
+            </div>
+
+            <!-- Team Full Names -->
+            <div class="flex justify-between text-sm text-gray-500 mb-3">
+              <span><%= game.away_team %></span>
+              <span><%= game.home_team %></span>
+            </div>
+
+            <!-- Key Injuries -->
+            <% away_injuries = key_injuries_for_team(game.away_abbr) %>
+            <% home_injuries = key_injuries_for_team(game.home_abbr) %>
+            <% if away_injuries.any? || home_injuries.any? %>
+              <div class="mb-3 p-3 bg-gray-900/50 light:bg-gray-100 rounded-lg">
+                <div class="text-xs font-medium text-orange-400 mb-2">
+                  <iconify-icon icon="solar:health-broken" width="12" class="mr-1"></iconify-icon>
+                  <%= t('schedule.key_injuries', default: 'Key Injuries') %>
+                </div>
+                <div class="grid grid-cols-2 gap-2 text-xs">
+                  <div>
+                    <% away_injuries.first(3).each do |injury| %>
+                      <div class="text-gray-400 light:text-gray-600">
+                        <span class="text-white light:text-gray-900"><%= injury["player"] %></span>
+                        <span class="text-orange-400">(<%= injury["status"] %>)</span>
+                      </div>
+                    <% end %>
+                    <% if away_injuries.empty? %>
+                      <span class="text-gray-600">-</span>
+                    <% end %>
+                  </div>
+                  <div class="text-right">
+                    <% home_injuries.first(3).each do |injury| %>
+                      <div class="text-gray-400 light:text-gray-600">
+                        <span class="text-white light:text-gray-900"><%= injury["player"] %></span>
+                        <span class="text-orange-400">(<%= injury["status"] %>)</span>
+                      </div>
+                    <% end %>
+                    <% if home_injuries.empty? %>
+                      <span class="text-gray-600">-</span>
+                    <% end %>
+                  </div>
+                </div>
+              </div>
+            <% end %>
+
+            <!-- Report Link (if exists) -->
+            <% report = game.reports.published.last %>
+            <% if report %>
+              <%= link_to report_path(report, sport: current_sport&.slug),
+                  class: "block w-full text-center py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium transition" do %>
+                <%= t('schedule.view_report', default: 'View Report') %>
+              <% end %>
+            <% end %>
+          </div>
+        </div>
+      <% end %>
+    </div>
+  <% else %>
+    <div class="bg-gray-900 light:bg-white rounded-xl p-12 text-center border border-gray-800 light:border-gray-200">
+      <iconify-icon icon="solar:calendar-linear" width="48" class="text-gray-700 light:text-gray-300 mx-auto mb-4"></iconify-icon>
+      <p class="text-gray-500"><%= t('schedule.no_games', default: 'No games') %></p>
+    </div>
+  <% end %>
+</div>

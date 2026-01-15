@@ -1,0 +1,76 @@
+ko:
+  # Navigation
+  nav:
+    home: "홈"
+    reports: "리포트"
+    insights: "인사이트"
+    schedule: "스케줄"
+    profile: "프로필"
+
+  # Schedule
+  schedule:
+    title: "스케줄 엣지"
+    total_games: "전체"
+    games: "경기"
+    with_edge: "엣지"
+    all: "전체"
+    edge_only: "엣지만"
+    no_games: "이 날은 경기가 없습니다"
+    b2b_warning: "백투백 - 피로 주의"
+    three_in_four_warning: "4일간 3경기"
+    today: "오늘"
+    yesterday: "어제"
+    tomorrow: "내일"
+
+  # Sports
+  sports:
+    basketball: "농구"
+    baseball: "야구"
+    soccer: "축구"
+
+  # Home
+  home:
+    todays_games: "오늘의 경기"
+    upcoming_games: "다가오는 경기"
+    no_games: "오늘 예정된 경기가 없습니다"
+    recent_reports: "최근 리포트"
+    no_reports: "리포트가 없습니다"
+    latest_insights: "최신 인사이트"
+    no_insights: "인사이트가 없습니다"
+    see_all: "전체보기"
+    view_report: "리포트 보기"
+    edge_alert: "스케줄 엣지"
+
+  # Reports
+  reports:
+    title: "리포트"
+    no_reports: "아직 리포트가 없습니다"
+    check_back: "곧 분석이 업데이트됩니다"
+    back: "뒤로"
+    pick: "추천"
+    published: "발행일"
+
+  # Insights
+  insights:
+    title: "인사이트"
+    no_insights: "아직 인사이트가 없습니다"
+    stay_tuned: "분석을 준비 중입니다"
+    back: "뒤로"
+    published: "발행일"
+
+  # Profile
+  profile:
+    title: "프로필"
+    guest_user: "게스트"
+    sign_in_prompt: "로그인하고 모든 기능을 이용하세요"
+    notifications: "알림"
+    subscription: "구독"
+    settings: "설정"
+    help: "도움말"
+
+  # Categories
+  categories:
+    team_analysis: "팀 분석"
+    league_trends: "리그 트렌드"
+    player_focus: "선수 포커스"
+    betting_edge: "베팅 엣지"

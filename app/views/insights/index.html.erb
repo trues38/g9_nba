@@ -1,0 +1,29 @@
+<div class="px-4 py-4">
+  <h1 class="text-xl font-bold mb-4 light:text-gray-900"><%= t('insights.title') %></h1>
+
+  <% if @insights.any? %>
+    <div class="space-y-3">
+      <% @insights.each do |insight| %>
+        <%= link_to insight_path(insight, sport: current_sport&.slug), class: "block bg-gray-900 light:bg-white rounded-xl p-4 border border-gray-800 light:border-gray-200 hover:border-gray-700 light:hover:border-gray-300 light:shadow-sm transition" do %>
+          <div class="text-xs text-indigo-500 font-medium mb-2"><%= t("categories.#{insight.category}", default: insight.category&.titleize) %></div>
+          <div class="font-semibold light:text-gray-900 mb-2"><%= insight.title %></div>
+          <div class="text-sm text-gray-400 light:text-gray-500 line-clamp-2"><%= truncate(insight.content, length: 100) %></div>
+          <div class="flex items-center justify-between mt-3">
+            <div class="flex gap-1">
+              <% insight.tags_array.first(3).each do |tag| %>
+                <span class="text-xs px-2 py-0.5 bg-gray-800 light:bg-gray-100 text-gray-400 light:text-gray-600 rounded"><%= tag %></span>
+              <% end %>
+            </div>
+            <div class="text-xs text-gray-600 light:text-gray-400"><%= insight.published_at&.strftime("%m/%d") %></div>
+          </div>
+        <% end %>
+      <% end %>
+    </div>
+  <% else %>
+    <div class="bg-gray-900 light:bg-white rounded-xl p-12 text-center border border-gray-800 light:border-gray-200">
+      <iconify-icon icon="solar:lightbulb-bolt-linear" width="48" class="text-gray-700 light:text-gray-300 mx-auto mb-4"></iconify-icon>
+      <p class="text-gray-500"><%= t('insights.no_insights') %></p>
+      <p class="text-sm text-gray-600 light:text-gray-400 mt-1"><%= t('insights.stay_tuned') %></p>
+    </div>
+  <% end %>
+</div>

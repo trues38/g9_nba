@@ -1,0 +1,16 @@
+[Unit]
+Description=GATE9 SPORTS Rails App
+After=network.target
+
+[Service]
+Type=simple
+User=deploy
+WorkingDirectory=/var/www/gate9_sports
+Environment=RAILS_ENV=production
+Environment=RAILS_LOG_TO_STDOUT=true
+ExecStart=/bin/bash -lc 'bundle exec puma -C config/puma.rb'
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

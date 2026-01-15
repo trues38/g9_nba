@@ -1,0 +1,121 @@
+<div class="px-4 py-4 space-y-6">
+  <!-- Schedule Edge Alert -->
+  <% if @edge_games&.any? %>
+    <section>
+      <div class="flex justify-between items-center mb-3">
+        <h2 class="text-lg font-semibold light:text-gray-900">
+          <iconify-icon icon="solar:danger-triangle-bold" width="18" class="text-amber-500 mr-1"></iconify-icon>
+          <%= t('home.edge_alert', default: 'Schedule Edge') %>
+        </h2>
+        <%= link_to schedule_index_index_path(sport: current_sport&.slug, filter: "edge"), class: "text-sm text-indigo-500" do %>
+          <%= t('home.see_all') %>
+        <% end %>
+      </div>
+      <div class="space-y-2">
+        <% @edge_games.each do |game| %>
+          <div class="bg-gray-900 light:bg-white rounded-xl p-3 border border-gray-800 light:border-gray-200 light:shadow-sm">
+            <div class="flex justify-between items-center">
+              <div>
+                <span class="text-xs text-gray-500"><%= game.game_date.strftime("%m/%d %H:%M") %></span>
+                <div class="font-medium light:text-gray-900"><%= game.away_abbr %> @ <%= game.home_abbr %></div>
+              </div>
+              <div class="flex gap-1">
+                <% if game.schedule_note&.include?("B2B") %>
+                  <span class="px-2 py-1 bg-red-500/20 text-red-400 light:bg-red-100 light:text-red-600 text-xs rounded-full font-medium">B2B</span>
+                <% end %>
+                <% if game.schedule_note&.include?("3in4") %>
+                  <span class="px-2 py-1 bg-amber-500/20 text-amber-400 light:bg-amber-100 light:text-amber-600 text-xs rounded-full font-medium">3in4</span>
+                <% end %>
+              </div>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    </section>
+  <% end %>
+
+  <!-- Today's Games -->
+  <section>
+    <h2 class="text-lg font-semibold mb-3 light:text-gray-900"><%= @showing_upcoming ? t('home.upcoming_games', default: 'Upcoming Games') : t('home.todays_games') %></h2>
+    <% if @games&.any? %>
+      <div class="space-y-3">
+        <% @games.each do |game| %>
+          <div class="bg-gray-900 light:bg-white rounded-xl p-4 border border-gray-800 light:border-gray-200 light:shadow-sm">
+            <div class="flex justify-between items-center mb-2">
+              <span class="text-xs text-gray-500"><%= game.short_date %></span>
+              <span class="text-xs px-2 py-0.5 rounded-full bg-gray-800 light:bg-gray-100 text-gray-400 light:text-gray-600"><%= game.status || 'Scheduled' %></span>
+            </div>
+            <div class="text-center">
+              <div class="text-xl font-bold light:text-gray-900"><%= game.display_name %></div>
+              <div class="text-sm text-gray-500 mt-1"><%= game.venue %></div>
+            </div>
+            <% if game.reports.published.any? %>
+              <%= link_to report_path(game.reports.published.last, sport: current_sport&.slug),
+                  class: "mt-3 block w-full text-center py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium transition" do %>
+                <%= t('home.view_report') %>
+              <% end %>
+            <% end %>
+          </div>
+        <% end %>
+      </div>
+    <% else %>
+      <div class="bg-gray-900 light:bg-white rounded-xl p-8 text-center border border-gray-800 light:border-gray-200">
+        <iconify-icon icon="solar:calendar-mark-linear" width="48" class="text-gray-700 light:text-gray-300 mx-auto mb-3"></iconify-icon>
+        <p class="text-gray-500"><%= t('home.no_games') %></p>
+      </div>
+    <% end %>
+  </section>
+
+  <!-- Recent Reports -->
+  <section>
+    <div class="flex justify-between items-center mb-3">
+      <h2 class="text-lg font-semibold light:text-gray-900"><%= t('home.recent_reports') %></h2>
+      <%= link_to t('home.see_all'), reports_path(sport: current_sport&.slug), class: "text-sm text-indigo-500" %>
+    </div>
+    <% if @recent_reports&.any? %>
+      <div class="space-y-2">
+        <% @recent_reports.each do |report| %>
+          <%= link_to report_path(report, sport: current_sport&.slug), class: "block bg-gray-900 light:bg-white rounded-xl p-4 border border-gray-800 light:border-gray-200 hover:border-gray-700 light:hover:border-gray-300 light:shadow-sm transition" do %>
+            <div class="flex justify-between items-start">
+              <div>
+                <div class="font-medium light:text-gray-900"><%= report.game&.display_name %></div>
+                <div class="text-sm text-gray-500 mt-1"><%= report.pick %></div>
+              </div>
+              <div class="text-right">
+                <div class="text-sm font-medium text-indigo-500"><%= report.confidence_stars %></div>
+                <div class="text-xs text-gray-500 mt-1"><%= report.published_at&.strftime("%m/%d") %></div>
+              </div>
+            </div>
+          <% end %>
+        <% end %>
+      </div>
+    <% else %>
+      <div class="bg-gray-900 light:bg-white rounded-xl p-6 text-center border border-gray-800 light:border-gray-200">
+        <p class="text-gray-500"><%= t('home.no_reports') %></p>
+      </div>
+    <% end %>
+  </section>
+
+  <!-- Recent Insights -->
+  <section>
+    <div class="flex justify-between items-center mb-3">
+      <h2 class="text-lg font-semibold light:text-gray-900"><%= t('home.latest_insights') %></h2>
+      <%= link_to t('home.see_all'), insights_path(sport: current_sport&.slug), class: "text-sm text-indigo-500" %>
+    </div>
+    <% if @recent_insights&.any? %>
+      <div class="space-y-2">
+        <% @recent_insights.each do |insight| %>
+          <%= link_to insight_path(insight, sport: current_sport&.slug), class: "block bg-gray-900 light:bg-white rounded-xl p-4 border border-gray-800 light:border-gray-200 hover:border-gray-700 light:hover:border-gray-300 light:shadow-sm transition" do %>
+            <div class="text-sm text-indigo-500 mb-1"><%= t("categories.#{insight.category}", default: insight.category&.titleize) %></div>
+            <div class="font-medium light:text-gray-900"><%= insight.title %></div>
+            <div class="text-xs text-gray-500 mt-2"><%= insight.published_at&.strftime("%m/%d %H:%M") %></div>
+          <% end %>
+        <% end %>
+      </div>
+    <% else %>
+      <div class="bg-gray-900 light:bg-white rounded-xl p-6 text-center border border-gray-800 light:border-gray-200">
+        <p class="text-gray-500"><%= t('home.no_insights') %></p>
+      </div>
+    <% end %>
+  </section>
+</div>

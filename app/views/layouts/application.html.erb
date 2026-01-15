@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html class="h-full" data-controller="theme" data-theme-mode-value="<%= cookies[:theme] || 'dark' %>">
+  <head>
+    <title><%= content_for(:title) || "GATE9 SPORTS" %></title>
+    <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="application-name" content="GATE9 SPORTS">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#030712" data-theme-target="metaTheme">
+    <%= csrf_meta_tags %>
+    <%= csp_meta_tag %>
+
+    <%= yield :head %>
+
+    <link rel="icon" href="/icon.png" type="image/png">
+    <link rel="apple-touch-icon" href="/icon.png">
+
+    <!-- Iconify -->
+    <script src="https://cdn.jsdelivr.net/npm/iconify-icon@2.3.0/dist/iconify-icon.min.js"></script>
+
+    <%= stylesheet_link_tag :app, "data-turbo-track": "reload" %>
+    <%= javascript_importmap_tags %>
+  </head>
+
+  <body class="h-full antialiased transition-colors duration-200
+               bg-gray-950 text-white
+               dark:bg-gray-950 dark:text-white
+               light:bg-white light:text-gray-900"
+        data-theme-target="body">
+    <div class="flex flex-col h-full max-w-lg mx-auto">
+      <!-- Header -->
+      <header class="sticky top-0 z-50 backdrop-blur border-b transition-colors
+                     bg-gray-950/95 border-gray-800
+                     light:bg-white/95 light:border-gray-200"
+              data-theme-target="header">
+        <div class="px-4 py-3 flex justify-between items-center">
+          <h1 class="text-lg font-bold">
+            GATE9 <span class="text-indigo-500">SPORTS</span>
+          </h1>
+          <div class="flex items-center gap-2">
+            <!-- Language Toggle -->
+            <%= link_to url_for(locale: I18n.locale == :ko ? :en : :ko), class: "p-2 rounded-lg hover:bg-gray-800 light:hover:bg-gray-100 transition" do %>
+              <span class="text-xs font-medium"><%= I18n.locale == :ko ? 'EN' : 'KO' %></span>
+            <% end %>
+            <!-- Theme Toggle -->
+            <button data-action="click->theme#toggle" class="p-2 rounded-lg hover:bg-gray-800 light:hover:bg-gray-100 transition">
+              <iconify-icon icon="solar:sun-bold" class="w-5 h-5 hidden light:block" width="20"></iconify-icon>
+              <iconify-icon icon="solar:moon-bold" class="w-5 h-5 block light:hidden" width="20"></iconify-icon>
+            </button>
+          </div>
+        </div>
+        <!-- Sport Tabs -->
+        <nav class="flex gap-2 px-4 pb-3 overflow-x-auto">
+          <% [
+            ["basketball", t('sports.basketball')],
+            ["baseball", t('sports.baseball')],
+            ["soccer", t('sports.soccer')]
+          ].each do |slug, name| %>
+            <% is_current = current_sport&.slug == slug %>
+            <%= link_to sport_home_path(sport: slug),
+                class: "px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition #{is_current ? 'bg-indigo-500 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700 light:bg-gray-100 light:text-gray-600 light:hover:bg-gray-200'}" do %>
+              <%= name %>
+            <% end %>
+          <% end %>
+        </nav>
+      </header>
+
+      <!-- Main Content -->
+      <main class="flex-1 overflow-y-auto pb-20 bg-gray-950 light:bg-gray-50 transition-colors" data-theme-target="main">
+        <%= yield %>
+      </main>
+
+      <!-- Bottom Tab Bar (4 tabs) -->
+      <nav class="fixed bottom-0 left-0 right-0 backdrop-blur border-t safe-area-bottom transition-colors
+                  bg-gray-900/95 border-gray-800
+                  light:bg-white/95 light:border-gray-200"
+           data-theme-target="tabBar">
+        <div class="max-w-lg mx-auto flex justify-around py-2">
+          <%= link_to root_path, class: "flex flex-col items-center py-2 px-4 transition #{controller_name == 'schedule' ? 'text-indigo-500' : 'text-gray-500'}" do %>
+            <iconify-icon icon="solar:calendar-bold" width="24"></iconify-icon>
+            <span class="text-xs mt-1"><%= t('nav.schedule', default: 'Schedule') %></span>
+          <% end %>
+
+          <%= link_to reports_path(sport: current_sport&.slug || 'basketball'), class: "flex flex-col items-center py-2 px-4 transition #{controller_name == 'reports' ? 'text-indigo-500' : 'text-gray-500'}" do %>
+            <iconify-icon icon="solar:document-text-bold" width="24"></iconify-icon>
+            <span class="text-xs mt-1"><%= t('nav.reports') %></span>
+          <% end %>
+
+          <%= link_to insights_path(sport: current_sport&.slug || 'basketball'), class: "flex flex-col items-center py-2 px-4 transition #{controller_name == 'insights' ? 'text-indigo-500' : 'text-gray-500'}" do %>
+            <iconify-icon icon="solar:lightbulb-bolt-bold" width="24"></iconify-icon>
+            <span class="text-xs mt-1"><%= t('nav.insights') %></span>
+          <% end %>
+
+          <%= link_to profile_path, class: "flex flex-col items-center py-2 px-4 transition #{controller_name == 'profile' ? 'text-indigo-500' : 'text-gray-500'}" do %>
+            <iconify-icon icon="solar:user-circle-bold" width="24"></iconify-icon>
+            <span class="text-xs mt-1"><%= t('nav.profile') %></span>
+          <% end %>
+        </div>
+      </nav>
+    </div>
+  </body>
+</html>

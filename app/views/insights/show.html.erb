@@ -1,0 +1,30 @@
+<div class="px-4 py-4">
+  <!-- Back Button -->
+  <%= link_to insights_path(sport: current_sport&.slug), class: "inline-flex items-center text-gray-400 hover:text-white light:hover:text-gray-900 mb-4" do %>
+    <iconify-icon icon="solar:arrow-left-linear" width="20" class="mr-1"></iconify-icon>
+    <%= t('insights.back') %>
+  <% end %>
+
+  <!-- Insight Header -->
+  <div class="mb-4">
+    <div class="text-sm text-indigo-500 font-medium mb-2"><%= t("categories.#{@insight.category}", default: @insight.category&.titleize) %></div>
+    <h1 class="text-2xl font-bold light:text-gray-900"><%= @insight.title %></h1>
+    <div class="flex items-center gap-2 mt-3">
+      <% @insight.tags_array.each do |tag| %>
+        <span class="text-xs px-2 py-1 bg-gray-800 light:bg-gray-100 text-gray-400 light:text-gray-600 rounded"><%= tag %></span>
+      <% end %>
+    </div>
+  </div>
+
+  <!-- Insight Content -->
+  <div class="bg-gray-900 light:bg-white rounded-xl p-4 border border-gray-800 light:border-gray-200 light:shadow-sm">
+    <div class="prose prose-invert light:prose prose-sm max-w-none light:text-gray-700">
+      <%= simple_format(@insight.content) %>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="mt-4 text-center text-xs text-gray-600 light:text-gray-400">
+    <%= t('insights.published', default: 'Published') %> <%= @insight.published_at&.strftime("%Y-%m-%d %H:%M") %> KST
+  </div>
+</div>

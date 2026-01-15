@@ -1,0 +1,76 @@
+en:
+  # Navigation
+  nav:
+    home: "Home"
+    reports: "Reports"
+    insights: "Insights"
+    schedule: "Schedule"
+    profile: "Profile"
+
+  # Schedule
+  schedule:
+    title: "Schedule Edge"
+    total_games: "Total"
+    games: "Games"
+    with_edge: "Edge"
+    all: "All"
+    edge_only: "Edge Only"
+    no_games: "No games on this day"
+    b2b_warning: "Back-to-back - Watch for fatigue"
+    three_in_four_warning: "3 games in 4 days"
+    today: "Today"
+    yesterday: "Yesterday"
+    tomorrow: "Tomorrow"
+
+  # Sports
+  sports:
+    basketball: "Basketball"
+    baseball: "Baseball"
+    soccer: "Soccer"
+
+  # Home
+  home:
+    todays_games: "Today's Games"
+    upcoming_games: "Upcoming Games"
+    no_games: "No games scheduled today"
+    recent_reports: "Recent Reports"
+    no_reports: "No reports yet"
+    latest_insights: "Latest Insights"
+    no_insights: "No insights yet"
+    see_all: "See all"
+    view_report: "View Report"
+    edge_alert: "Schedule Edge"
+
+  # Reports
+  reports:
+    title: "Reports"
+    no_reports: "No reports available"
+    check_back: "Check back soon for analysis"
+    back: "Back"
+    pick: "Pick"
+    published: "Published"
+
+  # Insights
+  insights:
+    title: "Insights"
+    no_insights: "No insights available"
+    stay_tuned: "Stay tuned for analysis"
+    back: "Back"
+    published: "Published"
+
+  # Profile
+  profile:
+    title: "Profile"
+    guest_user: "Guest User"
+    sign_in_prompt: "Sign in to unlock features"
+    notifications: "Notifications"
+    subscription: "Subscription"
+    settings: "Settings"
+    help: "Help & Support"
+
+  # Categories
+  categories:
+    team_analysis: "Team Analysis"
+    league_trends: "League Trends"
+    player_focus: "Player Focus"
+    betting_edge: "Betting Edge"

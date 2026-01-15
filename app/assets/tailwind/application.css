@@ -1,0 +1,11 @@
+@import "tailwindcss";
+
+/* Light mode variant */
+@custom-variant light (&:where(.light, .light *));
+
+/* Safe area for mobile */
+@layer utilities {
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}

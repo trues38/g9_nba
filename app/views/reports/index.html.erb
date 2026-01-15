@@ -1,0 +1,29 @@
+<div class="px-4 py-4">
+  <h1 class="text-xl font-bold mb-4 light:text-gray-900"><%= t('reports.title') %></h1>
+
+  <% if @reports.any? %>
+    <div class="space-y-3">
+      <% @reports.each do |report| %>
+        <%= link_to report_path(report, sport: current_sport&.slug), class: "block bg-gray-900 light:bg-white rounded-xl p-4 border border-gray-800 light:border-gray-200 hover:border-gray-700 light:hover:border-gray-300 light:shadow-sm transition" do %>
+          <div class="flex justify-between items-start">
+            <div class="flex-1">
+              <div class="font-semibold light:text-gray-900"><%= report.game&.display_name %></div>
+              <div class="text-sm text-gray-400 light:text-gray-500 mt-1"><%= report.pick %></div>
+              <div class="text-xs text-gray-600 light:text-gray-400 mt-2"><%= report.game&.game_date&.strftime("%Y-%m-%d %H:%M") %></div>
+            </div>
+            <div class="text-right ml-4">
+              <div class="text-lg font-bold text-indigo-500"><%= report.confidence_stars %></div>
+              <div class="text-xs text-gray-500 mt-1"><%= report.published_at&.strftime("%m/%d") %></div>
+            </div>
+          </div>
+        <% end %>
+      <% end %>
+    </div>
+  <% else %>
+    <div class="bg-gray-900 light:bg-white rounded-xl p-12 text-center border border-gray-800 light:border-gray-200">
+      <iconify-icon icon="solar:document-text-linear" width="48" class="text-gray-700 light:text-gray-300 mx-auto mb-4"></iconify-icon>
+      <p class="text-gray-500"><%= t('reports.no_reports') %></p>
+      <p class="text-sm text-gray-600 light:text-gray-400 mt-1"><%= t('reports.check_back') %></p>
+    </div>
+  <% end %>
+</div>
