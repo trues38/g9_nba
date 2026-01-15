@@ -17,11 +17,13 @@ Rails.application.routes.draw do
     get "/", to: "schedule#index", as: :sport_home
   end
 
-  # Admin namespace (later)
+  # Admin namespace
   namespace :admin do
     resources :sports
-    resources :reports
+    resources :reports do
+      post :publish, on: :member
+    end
     resources :insights
-    resources :games
+    resources :games, only: [:index, :show]
   end
 end

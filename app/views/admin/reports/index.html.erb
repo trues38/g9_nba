@@ -1,0 +1,57 @@
+<div class="flex items-center justify-between mb-6">
+  <h1 class="text-2xl font-bold">Reports</h1>
+  <%= link_to "New Report", new_admin_report_path, class: "px-4 py-2 bg-indigo-600 hover:bg-indigo-700 rounded-lg font-medium" %>
+</div>
+
+<div class="bg-gray-800 rounded-xl border border-gray-700 overflow-hidden">
+  <table class="w-full">
+    <thead class="bg-gray-700/50">
+      <tr>
+        <th class="text-left px-4 py-3 text-sm font-medium text-gray-400">Game</th>
+        <th class="text-left px-4 py-3 text-sm font-medium text-gray-400">Title</th>
+        <th class="text-left px-4 py-3 text-sm font-medium text-gray-400">Pick</th>
+        <th class="text-left px-4 py-3 text-sm font-medium text-gray-400">Status</th>
+        <th class="text-right px-4 py-3 text-sm font-medium text-gray-400">Actions</th>
+      </tr>
+    </thead>
+    <tbody class="divide-y divide-gray-700">
+      <% @reports.each do |report| %>
+        <tr class="hover:bg-gray-700/30">
+          <td class="px-4 py-3">
+            <div class="font-medium"><%= report.game.away_abbr %> @ <%= report.game.home_abbr %></div>
+            <div class="text-xs text-gray-500"><%= report.game.game_date.strftime("%m/%d %H:%M") %></div>
+          </td>
+          <td class="px-4 py-3">
+            <div class="text-sm"><%= report.title || "Untitled" %></div>
+          </td>
+          <td class="px-4 py-3">
+            <% if report.pick.present? %>
+              <span class="px-2 py-1 bg-indigo-600/30 text-indigo-400 rounded text-sm"><%= report.pick %></span>
+            <% else %>
+              <span class="text-gray-500">-</span>
+            <% end %>
+          </td>
+          <td class="px-4 py-3">
+            <% if report.published? %>
+              <span class="px-2 py-1 bg-green-600/30 text-green-400 rounded text-xs">Published</span>
+            <% else %>
+              <span class="px-2 py-1 bg-yellow-600/30 text-yellow-400 rounded text-xs">Draft</span>
+            <% end %>
+          </td>
+          <td class="px-4 py-3 text-right space-x-2">
+            <%= link_to "Edit", edit_admin_report_path(report), class: "text-indigo-400 hover:text-indigo-300 text-sm" %>
+            <% unless report.published? %>
+              <%= button_to "Publish", publish_admin_report_path(report), method: :post, class: "text-green-400 hover:text-green-300 text-sm" %>
+            <% end %>
+            <%= button_to "Delete", admin_report_path(report), method: :delete, data: { confirm: "Delete this report?" }, class: "text-red-400 hover:text-red-300 text-sm" %>
+          </td>
+        </tr>
+      <% end %>
+      <% if @reports.empty? %>
+        <tr>
+          <td colspan="5" class="px-4 py-8 text-center text-gray-500">No reports yet</td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+</div>

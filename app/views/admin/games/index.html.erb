@@ -1,0 +1,52 @@
+<h1 class="text-2xl font-bold mb-6">Upcoming Games</h1>
+
+<div class="bg-gray-800 rounded-xl border border-gray-700 overflow-hidden">
+  <table class="w-full">
+    <thead class="bg-gray-700/50">
+      <tr>
+        <th class="text-left px-4 py-3 text-sm font-medium text-gray-400">Date</th>
+        <th class="text-left px-4 py-3 text-sm font-medium text-gray-400">Matchup</th>
+        <th class="text-left px-4 py-3 text-sm font-medium text-gray-400">Spread</th>
+        <th class="text-left px-4 py-3 text-sm font-medium text-gray-400">O/U</th>
+        <th class="text-left px-4 py-3 text-sm font-medium text-gray-400">Report</th>
+        <th class="text-right px-4 py-3 text-sm font-medium text-gray-400">Action</th>
+      </tr>
+    </thead>
+    <tbody class="divide-y divide-gray-700">
+      <% @games.each do |game| %>
+        <tr class="hover:bg-gray-700/30 <%= game.game_date.to_date == Date.current ? 'bg-indigo-900/20' : '' %>">
+          <td class="px-4 py-3">
+            <div class="font-medium"><%= game.game_date.strftime("%m/%d") %></div>
+            <div class="text-xs text-gray-500"><%= game.game_date.strftime("%H:%M") %></div>
+          </td>
+          <td class="px-4 py-3">
+            <div class="font-medium"><%= game.away_abbr %> @ <%= game.home_abbr %></div>
+            <div class="text-xs text-gray-500"><%= game.venue %></div>
+          </td>
+          <td class="px-4 py-3 text-sm">
+            <% if game.home_spread.present? %>
+              <%= game.home_abbr %> <%= game.home_spread > 0 ? "+#{game.home_spread}" : game.home_spread %>
+            <% else %>
+              <span class="text-gray-500">-</span>
+            <% end %>
+          </td>
+          <td class="px-4 py-3 text-sm">
+            <%= game.total_line || "-" %>
+          </td>
+          <td class="px-4 py-3">
+            <% if game.reports.any? %>
+              <span class="px-2 py-1 bg-green-600/30 text-green-400 rounded text-xs">
+                <%= game.reports.count %> report(s)
+              </span>
+            <% else %>
+              <span class="text-gray-500 text-sm">None</span>
+            <% end %>
+          </td>
+          <td class="px-4 py-3 text-right">
+            <%= link_to "Write Report", new_admin_report_path(game_id: game.id), class: "text-indigo-400 hover:text-indigo-300 text-sm" %>
+          </td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+</div>

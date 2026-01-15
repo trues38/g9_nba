@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin - Gate9 Sports</title>
+  <%= csrf_meta_tags %>
+  <%= csp_meta_tag %>
+  <%= stylesheet_link_tag "tailwind", "inter-font", "data-turbo-track": "reload" %>
+  <%= stylesheet_link_tag "application", "data-turbo-track": "reload" %>
+  <%= javascript_importmap_tags %>
+</head>
+<body class="bg-gray-900 text-white min-h-screen">
+  <nav class="bg-gray-800 border-b border-gray-700 px-4 py-3">
+    <div class="max-w-4xl mx-auto flex items-center justify-between">
+      <div class="flex items-center gap-4">
+        <span class="font-bold text-lg">Gate9 Admin</span>
+        <div class="flex gap-2">
+          <%= link_to "Reports", admin_reports_path, class: "px-3 py-1 rounded #{controller_name == 'reports' ? 'bg-indigo-600' : 'hover:bg-gray-700'}" %>
+          <%= link_to "Games", admin_games_path, class: "px-3 py-1 rounded #{controller_name == 'games' ? 'bg-indigo-600' : 'hover:bg-gray-700'}" %>
+        </div>
+      </div>
+      <%= link_to "View Site →", root_path, class: "text-sm text-gray-400 hover:text-white" %>
+    </div>
+  </nav>
+
+  <main class="max-w-4xl mx-auto px-4 py-6">
+    <% if notice %>
+      <div class="mb-4 p-3 bg-green-600/20 border border-green-600 rounded-lg text-green-400">
+        <%= notice %>
+      </div>
+    <% end %>
+    <% if alert %>
+      <div class="mb-4 p-3 bg-red-600/20 border border-red-600 rounded-lg text-red-400">
+        <%= alert %>
+      </div>
+    <% end %>
+
+    <%= yield %>
+  </main>
+</body>
+</html>

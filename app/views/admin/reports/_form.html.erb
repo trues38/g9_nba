@@ -1,0 +1,61 @@
+<%= form_with model: [:admin, @report], class: "space-y-6" do |f| %>
+  <% if @report.errors.any? %>
+    <div class="p-4 bg-red-600/20 border border-red-600 rounded-lg">
+      <ul class="list-disc list-inside text-red-400">
+        <% @report.errors.full_messages.each do |msg| %>
+          <li><%= msg %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <div>
+    <label class="block text-sm font-medium text-gray-300 mb-2">Game</label>
+    <%= f.select :game_id,
+        @games.map { |g| ["#{g.game_date.strftime('%m/%d %H:%M')} - #{g.away_abbr} @ #{g.home_abbr}", g.id] },
+        { include_blank: "Select a game..." },
+        class: "w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent" %>
+  </div>
+
+  <div>
+    <label class="block text-sm font-medium text-gray-300 mb-2">Title</label>
+    <%= f.text_field :title,
+        placeholder: "e.g., Lakers vs Warriors Analysis",
+        class: "w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent" %>
+  </div>
+
+  <div class="grid grid-cols-2 gap-4">
+    <div>
+      <label class="block text-sm font-medium text-gray-300 mb-2">Pick</label>
+      <%= f.text_field :pick,
+          placeholder: "e.g., LAL -3.5, Over 220.5",
+          class: "w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent" %>
+    </div>
+    <div>
+      <label class="block text-sm font-medium text-gray-300 mb-2">Confidence</label>
+      <%= f.select :confidence,
+          [["★★★★★ (5)", "★★★★★"], ["★★★★☆ (4)", "★★★★☆"], ["★★★☆☆ (3)", "★★★☆☆"], ["★★☆☆☆ (2)", "★★☆☆☆"], ["★☆☆☆☆ (1)", "★☆☆☆☆"]],
+          { include_blank: "Select..." },
+          class: "w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent" %>
+    </div>
+  </div>
+
+  <div>
+    <label class="block text-sm font-medium text-gray-300 mb-2">Content (Markdown supported)</label>
+    <%= f.text_area :content,
+        rows: 15,
+        placeholder: "## Analysis\n\nPaste your report content here...\n\n### Key Factors\n- Factor 1\n- Factor 2",
+        class: "w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent font-mono text-sm" %>
+  </div>
+
+  <div class="flex items-center gap-3">
+    <%= f.check_box :free, class: "w-5 h-5 rounded bg-gray-700 border-gray-600 text-indigo-600 focus:ring-indigo-500" %>
+    <%= f.label :free, "Free (visible to all users)", class: "text-sm text-gray-300" %>
+  </div>
+
+  <div class="flex gap-3">
+    <%= f.submit @report.new_record? ? "Create Report" : "Update Report",
+        class: "px-6 py-3 bg-indigo-600 hover:bg-indigo-700 rounded-lg font-medium cursor-pointer" %>
+    <%= link_to "Cancel", admin_reports_path, class: "px-6 py-3 bg-gray-700 hover:bg-gray-600 rounded-lg" %>
+  </div>
+<% end %>
