@@ -194,6 +194,9 @@ GEM
     nokogiri (1.19.0-x86_64-linux-musl)
       racc (~> 1.4)
     ostruct (0.6.3)
+    pagy (43.2.6)
+      json
+      yaml
     parallel (1.27.0)
     parser (3.3.10.1)
       ast (~> 2.4.1)
@@ -257,6 +260,7 @@ GEM
       erb
       psych (>= 4.0.0)
       tsort
+    redcarpet (3.6.1)
     regexp_parser (2.11.3)
     reline (0.6.3)
       io-console (~> 0.5)
@@ -364,6 +368,7 @@ GEM
       base64
       websocket-extensions (>= 0.1.0)
     websocket-extensions (0.1.5)
+    yaml (0.4.0)
     zeitwerk (2.7.4)
 
 PLATFORMS
@@ -386,9 +391,11 @@ DEPENDENCIES
   image_processing (~> 1.2)
   importmap-rails
   kamal
+  pagy
   propshaft
   puma (>= 5.0)
   rails (~> 8.1.2)
+  redcarpet
   rubocop-rails-omakase
   solid_cable
   solid_cache

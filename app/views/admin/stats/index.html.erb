@@ -1,0 +1,204 @@
+<div class="space-y-6">
+  <div class="flex items-center justify-between">
+    <h1 class="text-2xl font-bold">Pick Performance</h1>
+    <div class="flex gap-2">
+      <%= button_to "Sync from Games", admin_bulk_sync_results_path, method: :post, class: "px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 rounded text-sm" %>
+    </div>
+  </div>
+
+  <!-- Overall Stats -->
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+    <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
+      <div class="text-gray-400 text-sm">Total Picks</div>
+      <div class="text-2xl font-bold"><%= @overall_stats[:total] %></div>
+    </div>
+    <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
+      <div class="text-gray-400 text-sm">Win Rate</div>
+      <div class="text-2xl font-bold <%= @overall_stats[:win_rate] >= 52.4 ? 'text-green-400' : 'text-red-400' %>">
+        <%= @overall_stats[:win_rate] %>%
+      </div>
+      <div class="text-xs text-gray-500"><%= @overall_stats[:wins] %>W - <%= @overall_stats[:losses] %>L - <%= @overall_stats[:pushes] %>P</div>
+    </div>
+    <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
+      <div class="text-gray-400 text-sm">Net Units</div>
+      <div class="text-2xl font-bold <%= @overall_stats[:net_units] >= 0 ? 'text-green-400' : 'text-red-400' %>">
+        <%= @overall_stats[:net_units] >= 0 ? '+' : '' %><%= @overall_stats[:net_units] %>u
+      </div>
+    </div>
+    <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
+      <div class="text-gray-400 text-sm">ROI</div>
+      <div class="text-2xl font-bold <%= @overall_stats[:roi] >= 0 ? 'text-green-400' : 'text-red-400' %>">
+        <%= @overall_stats[:roi] >= 0 ? '+' : '' %><%= @overall_stats[:roi] %>%
+      </div>
+    </div>
+  </div>
+
+  <!-- Last 30 Days -->
+  <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
+    <h2 class="text-lg font-semibold mb-3">Last 30 Days</h2>
+    <div class="grid grid-cols-4 gap-4 text-center">
+      <div>
+        <div class="text-gray-400 text-sm">Picks</div>
+        <div class="text-xl font-bold"><%= @recent_stats[:total] %></div>
+      </div>
+      <div>
+        <div class="text-gray-400 text-sm">Win Rate</div>
+        <div class="text-xl font-bold <%= @recent_stats[:win_rate] >= 52.4 ? 'text-green-400' : 'text-yellow-400' %>">
+          <%= @recent_stats[:win_rate] %>%
+        </div>
+      </div>
+      <div>
+        <div class="text-gray-400 text-sm">Units</div>
+        <div class="text-xl font-bold <%= @recent_stats[:net_units] >= 0 ? 'text-green-400' : 'text-red-400' %>">
+          <%= @recent_stats[:net_units] >= 0 ? '+' : '' %><%= @recent_stats[:net_units] %>u
+        </div>
+      </div>
+      <div>
+        <div class="text-gray-400 text-sm">ROI</div>
+        <div class="text-xl font-bold"><%= @recent_stats[:roi] %>%</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- By Pick Type -->
+  <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
+    <h2 class="text-lg font-semibold mb-3">By Pick Type</h2>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="text-gray-400 border-b border-gray-700">
+          <tr>
+            <th class="text-left py-2">Type</th>
+            <th class="text-center">Record</th>
+            <th class="text-center">Win %</th>
+            <th class="text-center">Units</th>
+            <th class="text-center">ROI</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @stats_by_type.each do |type, stats| %>
+            <% next if stats[:total].zero? %>
+            <tr class="border-b border-gray-700/50">
+              <td class="py-2 capitalize"><%= type %></td>
+              <td class="text-center"><%= stats[:wins] %>-<%= stats[:losses] %>-<%= stats[:pushes] %></td>
+              <td class="text-center <%= stats[:win_rate] >= 52.4 ? 'text-green-400' : '' %>"><%= stats[:win_rate] %>%</td>
+              <td class="text-center <%= stats[:net_units] >= 0 ? 'text-green-400' : 'text-red-400' %>">
+                <%= stats[:net_units] >= 0 ? '+' : '' %><%= stats[:net_units] %>u
+              </td>
+              <td class="text-center"><%= stats[:roi] %>%</td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- By Consensus -->
+  <% if @stats_by_consensus.any? %>
+  <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
+    <h2 class="text-lg font-semibold mb-3">By Analyst Consensus</h2>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="text-gray-400 border-b border-gray-700">
+          <tr>
+            <th class="text-left py-2">Consensus</th>
+            <th class="text-center">Record</th>
+            <th class="text-center">Win %</th>
+            <th class="text-center">Units</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @stats_by_consensus.sort_by { |k, _| k.to_s }.reverse.each do |consensus, stats| %>
+            <tr class="border-b border-gray-700/50">
+              <td class="py-2"><%= consensus %></td>
+              <td class="text-center"><%= stats[:wins] %>-<%= stats[:losses] %>-<%= stats[:pushes] %></td>
+              <td class="text-center <%= stats[:win_rate] >= 52.4 ? 'text-green-400' : '' %>"><%= stats[:win_rate] %>%</td>
+              <td class="text-center <%= stats[:net_units] >= 0 ? 'text-green-400' : 'text-red-400' %>">
+                <%= stats[:net_units] >= 0 ? '+' : '' %><%= stats[:net_units] %>u
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <% end %>
+
+  <!-- Monthly Breakdown -->
+  <% if @monthly_stats.any? %>
+  <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
+    <h2 class="text-lg font-semibold mb-3">Monthly Performance</h2>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="text-gray-400 border-b border-gray-700">
+          <tr>
+            <th class="text-left py-2">Month</th>
+            <th class="text-center">Record</th>
+            <th class="text-center">Win %</th>
+            <th class="text-center">Units</th>
+            <th class="text-center">ROI</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @monthly_stats.sort.reverse.first(6).each do |month, stats| %>
+            <tr class="border-b border-gray-700/50">
+              <td class="py-2"><%= month %></td>
+              <td class="text-center"><%= stats[:wins] %>-<%= stats[:losses] %>-<%= stats[:pushes] %></td>
+              <td class="text-center <%= stats[:win_rate] >= 52.4 ? 'text-green-400' : '' %>"><%= stats[:win_rate] %>%</td>
+              <td class="text-center <%= stats[:net_units] >= 0 ? 'text-green-400' : 'text-red-400' %>">
+                <%= stats[:net_units] >= 0 ? '+' : '' %><%= stats[:net_units] %>u
+              </td>
+              <td class="text-center"><%= stats[:roi] %>%</td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <% end %>
+
+  <!-- Pending Results -->
+  <% if @pending_reports.any? %>
+  <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
+    <h2 class="text-lg font-semibold mb-3">Pending Results (<%= @pending_reports.count %>)</h2>
+    <div class="space-y-3">
+      <% @pending_reports.each do |report| %>
+        <div class="bg-gray-700/50 rounded-lg p-3">
+          <div class="flex items-center justify-between mb-2">
+            <div>
+              <span class="font-medium"><%= report.game.away_abbr %> @ <%= report.game.home_abbr %></span>
+              <span class="text-gray-400 text-sm ml-2"><%= report.game.game_date.strftime("%m/%d") %></span>
+            </div>
+            <div class="text-sm">
+              <span class="text-indigo-400"><%= report.pick %></span>
+              <% if report.pick_type.present? %>
+                <span class="text-gray-500">(<%= report.pick_type %>)</span>
+              <% end %>
+            </div>
+          </div>
+
+          <%= form_with url: admin_record_result_path(report), method: :post, class: "flex items-center gap-2" do %>
+            <input type="number" name="home_score" placeholder="Home"
+                   value="<%= report.game.home_score %>"
+                   class="w-16 px-2 py-1 bg-gray-600 border border-gray-500 rounded text-center text-sm">
+            <span class="text-gray-400">-</span>
+            <input type="number" name="away_score" placeholder="Away"
+                   value="<%= report.game.away_score %>"
+                   class="w-16 px-2 py-1 bg-gray-600 border border-gray-500 rounded text-center text-sm">
+
+            <select name="result" class="px-2 py-1 bg-gray-600 border border-gray-500 rounded text-sm">
+              <option value="">Auto</option>
+              <option value="win">Win</option>
+              <option value="loss">Loss</option>
+              <option value="push">Push</option>
+            </select>
+
+            <button type="submit" class="px-3 py-1 bg-green-600 hover:bg-green-700 rounded text-sm">
+              Record
+            </button>
+          <% end %>
+        </div>
+      <% end %>
+    </div>
+  </div>
+  <% end %>
+</div>

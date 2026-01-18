@@ -10,7 +10,6 @@ namespace :nba do
 
     http = Net::HTTP.new(uri.host, uri.port)
     http.use_ssl = true
-    http.verify_mode = OpenSSL::SSL::VERIFY_NONE
 
     request = Net::HTTP::Get.new(uri)
     request["User-Agent"] = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
@@ -189,7 +188,6 @@ namespace :nba do
       begin
         http = Net::HTTP.new(uri.host, uri.port)
         http.use_ssl = true
-        http.verify_mode = OpenSSL::SSL::VERIFY_NONE
         request = Net::HTTP::Get.new(uri)
         request["User-Agent"] = "Mozilla/5.0"
         response = http.request(request)
@@ -267,7 +265,6 @@ namespace :nba do
     begin
       http = Net::HTTP.new(uri.host, uri.port)
       http.use_ssl = true
-      http.verify_mode = OpenSSL::SSL::VERIFY_NONE
       request = Net::HTTP::Get.new(uri)
       request["User-Agent"] = "Mozilla/5.0"
       response = http.request(request)
@@ -328,7 +325,6 @@ namespace :nba do
     begin
       http = Net::HTTP.new(uri.host, uri.port)
       http.use_ssl = true
-      http.verify_mode = OpenSSL::SSL::VERIFY_NONE
       http.read_timeout = 30
       request = Net::HTTP::Get.new(uri)
       request["User-Agent"] = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
@@ -464,7 +460,6 @@ namespace :nba do
       begin
         http = Net::HTTP.new(uri.host, uri.port)
         http.use_ssl = true
-        http.verify_mode = OpenSSL::SSL::VERIFY_NONE
         request = Net::HTTP::Get.new(uri)
         request["User-Agent"] = "Mozilla/5.0"
         response = http.request(request)
@@ -514,7 +509,6 @@ namespace :nba do
           summary_uri = URI("https://site.api.espn.com/apis/site/v2/sports/basketball/nba/summary?event=#{event_id}")
           http2 = Net::HTTP.new(summary_uri.host, summary_uri.port)
           http2.use_ssl = true
-          http2.verify_mode = OpenSSL::SSL::VERIFY_NONE
           req2 = Net::HTTP::Get.new(summary_uri)
           req2["User-Agent"] = "Mozilla/5.0"
           resp2 = http2.request(req2)
@@ -542,5 +536,224 @@ namespace :nba do
   desc "Fetch all ESPN data (odds + injuries + lineups + team stats)"
   task fetch_all: [:fetch_odds, :fetch_injuries, :fetch_lineups, :fetch_team_stats] do
     puts "\nAll ESPN data updated!"
+  end
+
+  desc "Fetch live scores from NBA official API (one-time)"
+  task fetch_live_scores: :environment do
+    require 'net/http'
+    require 'json'
+
+    sport = Sport.find_by(slug: "basketball")
+    unless sport
+      puts "Sport not found"
+      exit
+    end
+
+    uri = URI("https://cdn.nba.com/static/json/liveData/scoreboard/todaysScoreboard_00.json")
+
+    begin
+      http = Net::HTTP.new(uri.host, uri.port)
+      http.use_ssl = true
+      request = Net::HTTP::Get.new(uri)
+      request["User-Agent"] = "Mozilla/5.0 (compatible; Gate9Sports/1.0)"
+      response = http.request(request)
+      data = JSON.parse(response.body)
+    rescue => e
+      puts "Error: #{e.message}"
+      exit
+    end
+
+    updated = 0
+    games_data = data.dig("scoreboard", "games") || []
+
+    games_data.each do |g|
+      home_abbr = g.dig("homeTeam", "teamTricode")
+      away_abbr = g.dig("awayTeam", "teamTricode")
+
+      # Find game by teams (today's games)
+      game = Game.where(sport: sport)
+                 .where(home_abbr: home_abbr, away_abbr: away_abbr)
+                 .where("game_date >= ? AND game_date < ?", Date.current.beginning_of_day, Date.current.end_of_day + 1.day)
+                 .first
+      next unless game
+
+      # Update scores
+      game.home_score = g.dig("homeTeam", "score").to_i
+      game.away_score = g.dig("awayTeam", "score").to_i
+
+      # Parse status (e.g., "Q3 8:54", "Half", "Final", "9:30 pm ET")
+      status_text = g["gameStatusText"] || ""
+      game_status_num = g["gameStatus"] # 1=scheduled, 2=live, 3=final
+
+      case game_status_num
+      when 1
+        game.status = "scheduled"
+      when 2
+        game.status = "live"
+        # Parse period and clock from status_text (e.g., "Q3 8:54")
+        if status_text =~ /Q(\d+)\s+([\d:]+)/
+          game.period = $1.to_i
+          game.clock = $2
+        elsif status_text.downcase.include?("half")
+          game.period = 2
+          game.clock = "HT"
+        elsif status_text =~ /OT(\d*)\s+([\d:]+)/
+          game.period = 4 + ($1.presence || 1).to_i
+          game.clock = $2
+        end
+      when 3
+        game.status = "finished"
+        game.period = g["period"]
+      end
+
+      # Linescores (quarter by quarter)
+      home_periods = g.dig("homeTeam", "periods")
+      away_periods = g.dig("awayTeam", "periods")
+      if home_periods
+        game.home_linescores = home_periods.map { |p| p["score"].to_i }.to_json
+      end
+      if away_periods
+        game.away_linescores = away_periods.map { |p| p["score"].to_i }.to_json
+      end
+
+      if game.changed?
+        game.save!
+        updated += 1
+        status_emoji = game.status == "live" ? "🔴" : (game.status == "finished" ? "✅" : "⏳")
+        clock_info = game.status == "live" ? " Q#{game.period} #{game.clock}" : ""
+        puts "#{status_emoji} #{game.away_abbr} #{game.away_score} @ #{game.home_abbr} #{game.home_score}#{clock_info}"
+      end
+    end
+
+    puts "\nUpdated #{updated} games"
+  end
+
+  desc "Poll live scores continuously (run in background)"
+  task live_poll: :environment do
+    require 'net/http'
+    require 'json'
+
+    puts "Starting live score polling... (Ctrl+C to stop)"
+    puts "Polling every 30 seconds during active games"
+
+    sport = Sport.find_by(slug: "basketball")
+    unless sport
+      puts "Sport not found"
+      exit
+    end
+
+    loop do
+      # Check if there are any games today
+      today = Date.current
+      today_games = Game.where(sport: sport)
+                        .where("DATE(game_date) = ?", today)
+
+      if today_games.none?
+        puts "[#{Time.current.strftime('%H:%M:%S')}] No games today. Sleeping 5 minutes..."
+        sleep 300
+        next
+      end
+
+      # Check if any games are live or about to start (within 30 min)
+      now = Time.current
+      active_or_upcoming = today_games.where(status: "live").or(
+        today_games.where("game_date BETWEEN ? AND ?", now - 30.minutes, now + 30.minutes)
+      )
+
+      if active_or_upcoming.none? && today_games.where(status: ["scheduled", "live"]).none?
+        puts "[#{Time.current.strftime('%H:%M:%S')}] No active games. Sleeping 5 minutes..."
+        sleep 300
+        next
+      end
+
+      # Fetch scores
+      begin
+        uri = URI("https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard")
+        http = Net::HTTP.new(uri.host, uri.port)
+        http.use_ssl = true
+        http.read_timeout = 10
+        request = Net::HTTP::Get.new(uri)
+        request["User-Agent"] = "Mozilla/5.0 (compatible; Gate9Sports/1.0)"
+        response = http.request(request)
+        data = JSON.parse(response.body)
+
+        updated = 0
+        live_count = 0
+
+        (data["events"] || []).each do |event|
+          competition = event["competitions"]&.first
+          next unless competition
+
+          home_comp = competition["competitors"]&.find { |c| c["homeAway"] == "home" }
+          away_comp = competition["competitors"]&.find { |c| c["homeAway"] == "away" }
+          next unless home_comp && away_comp
+
+          home_abbr = home_comp.dig("team", "abbreviation")
+          away_abbr = away_comp.dig("team", "abbreviation")
+
+          game_date = Time.parse(event["date"]).in_time_zone("Asia/Seoul").to_date
+          game = Game.where(sport: sport)
+                     .where(home_abbr: home_abbr, away_abbr: away_abbr)
+                     .where("DATE(game_date) = ?", game_date)
+                     .first
+          next unless game
+
+          status = event["status"] || {}
+          status_type = status.dig("type", "name")
+
+          game.home_score = home_comp["score"].to_i
+          game.away_score = away_comp["score"].to_i
+          game.period = status["period"]
+          game.clock = status["displayClock"]
+
+          case status_type
+          when "STATUS_IN_PROGRESS"
+            game.status = "live"
+            live_count += 1
+          when "STATUS_FINAL"
+            game.status = "finished"
+          when "STATUS_SCHEDULED"
+            game.status = "scheduled"
+          when "STATUS_HALFTIME"
+            game.status = "live"
+            game.clock = "HT"
+            live_count += 1
+          end
+
+          home_linescores = home_comp["linescores"]&.map { |ls| ls["value"].to_i }
+          away_linescores = away_comp["linescores"]&.map { |ls| ls["value"].to_i }
+          game.home_linescores = home_linescores.to_json if home_linescores
+          game.away_linescores = away_linescores.to_json if away_linescores
+
+          if game.changed?
+            game.save!
+            updated += 1
+
+            # Broadcast via Turbo Streams if ActionCable is available
+            if defined?(Turbo::StreamsChannel)
+              Turbo::StreamsChannel.broadcast_replace_to(
+                "live_scores",
+                target: "game_#{game.id}",
+                partial: "schedule/game_score",
+                locals: { game: game }
+              )
+            end
+          end
+        end
+
+        puts "[#{Time.current.strftime('%H:%M:%S')}] Updated #{updated} games, #{live_count} live"
+
+        # Sleep based on activity
+        if live_count > 0
+          sleep 30  # Active games: 30 seconds
+        else
+          sleep 60  # No live games: 1 minute
+        end
+
+      rescue => e
+        puts "[#{Time.current.strftime('%H:%M:%S')}] Error: #{e.message}"
+        sleep 60
+      end
+    end
   end
 end

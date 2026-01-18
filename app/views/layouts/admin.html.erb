@@ -18,9 +18,15 @@
         <div class="flex gap-2">
           <%= link_to "Reports", admin_reports_path, class: "px-3 py-1 rounded #{controller_name == 'reports' ? 'bg-indigo-600' : 'hover:bg-gray-700'}" %>
           <%= link_to "Games", admin_games_path, class: "px-3 py-1 rounded #{controller_name == 'games' ? 'bg-indigo-600' : 'hover:bg-gray-700'}" %>
+          <%= link_to "Stats", admin_stats_path, class: "px-3 py-1 rounded #{controller_name == 'stats' ? 'bg-indigo-600' : 'hover:bg-gray-700'}" %>
         </div>
       </div>
-      <%= link_to "View Site →", root_path, class: "text-sm text-gray-400 hover:text-white" %>
+      <div class="flex items-center gap-4">
+        <%= link_to "View Site →", root_path, class: "text-sm text-gray-400 hover:text-white" %>
+        <% if session[:admin_authenticated] %>
+          <%= button_to "Logout", admin_logout_path, method: :delete, class: "text-sm text-gray-400 hover:text-red-400" %>
+        <% end %>
+      </div>
     </div>
   </nav>
 

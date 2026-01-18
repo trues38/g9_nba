@@ -10,12 +10,22 @@ Rails.application.routes.draw do
 
   # Admin namespace (must be before sport-scoped routes!)
   namespace :admin do
+    # Auth
+    get "login", to: "sessions#new", as: :login
+    post "login", to: "sessions#create"
+    delete "logout", to: "sessions#destroy", as: :logout
+
     resources :sports
     resources :reports do
       post :publish, on: :member
     end
     resources :insights
     resources :games, only: [:index, :show]
+
+    # Stats / Performance tracking
+    get "stats", to: "stats#index"
+    post "stats/record/:id", to: "stats#record_result", as: :record_result
+    post "stats/sync", to: "stats#bulk_sync_results", as: :bulk_sync_results
   end
 
   # Sport-scoped resources (after admin to avoid conflicts)

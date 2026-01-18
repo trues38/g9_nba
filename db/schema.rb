@@ -10,14 +10,17 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_01_15_104202) do
+ActiveRecord::Schema[8.1].define(version: 2026_01_18_110000) do
   create_table "games", force: :cascade do |t|
     t.string "away_abbr"
     t.string "away_edge"
+    t.text "away_linescores"
     t.string "away_record"
     t.string "away_road_record"
+    t.integer "away_score"
     t.decimal "away_spread"
     t.string "away_team"
+    t.string "clock"
     t.datetime "created_at", null: false
     t.string "external_id"
     t.datetime "game_date"
@@ -25,9 +28,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_01_15_104202) do
     t.string "home_abbr"
     t.string "home_edge"
     t.string "home_home_record"
+    t.text "home_linescores"
     t.string "home_record"
+    t.integer "home_score"
     t.decimal "home_spread"
     t.string "home_team"
+    t.integer "period"
     t.integer "rest_days"
     t.string "schedule_note"
     t.integer "sport_id", null: false
@@ -35,7 +41,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_01_15_104202) do
     t.decimal "total_line"
     t.datetime "updated_at", null: false
     t.string "venue"
+    t.index ["away_abbr"], name: "index_games_on_away_abbr"
+    t.index ["external_id"], name: "index_games_on_external_id", unique: true
+    t.index ["game_date"], name: "index_games_on_game_date"
+    t.index ["home_abbr", "away_abbr", "game_date"], name: "index_games_on_home_abbr_and_away_abbr_and_game_date"
+    t.index ["home_abbr"], name: "index_games_on_home_abbr"
+    t.index ["sport_id", "game_date"], name: "index_games_on_sport_id_and_game_date"
     t.index ["sport_id"], name: "index_games_on_sport_id"
+    t.index ["status"], name: "index_games_on_status"
   end
 
   create_table "insights", force: :cascade do |t|
@@ -48,21 +61,41 @@ ActiveRecord::Schema[8.1].define(version: 2026_01_15_104202) do
     t.string "tags"
     t.string "title"
     t.datetime "updated_at", null: false
+    t.index ["published_at"], name: "index_insights_on_published_at"
+    t.index ["sport_id", "status"], name: "index_insights_on_sport_id_and_status"
     t.index ["sport_id"], name: "index_insights_on_sport_id"
+    t.index ["status"], name: "index_insights_on_status"
   end
 
   create_table "reports", force: :cascade do |t|
+    t.integer "actual_away_score"
+    t.integer "actual_home_score"
+    t.string "analyst_consensus"
     t.string "confidence"
     t.text "content"
     t.datetime "created_at", null: false
     t.boolean "free", default: false
     t.integer "game_id", null: false
     t.string "pick"
+    t.decimal "pick_line"
+    t.string "pick_side"
+    t.string "pick_type"
     t.datetime "published_at"
+    t.string "result"
+    t.text "result_note"
+    t.datetime "result_recorded_at"
+    t.decimal "stake", default: "1.0"
     t.string "status"
     t.string "title"
     t.datetime "updated_at", null: false
+    t.index ["free"], name: "index_reports_on_free"
+    t.index ["game_id", "status"], name: "index_reports_on_game_id_and_status"
     t.index ["game_id"], name: "index_reports_on_game_id"
+    t.index ["pick_type"], name: "index_reports_on_pick_type"
+    t.index ["published_at"], name: "index_reports_on_published_at"
+    t.index ["result", "pick_type"], name: "index_reports_on_result_and_pick_type"
+    t.index ["result"], name: "index_reports_on_result"
+    t.index ["status"], name: "index_reports_on_status"
   end
 
   create_table "sports", force: :cascade do |t|

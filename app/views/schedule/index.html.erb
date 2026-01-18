@@ -1,3 +1,4 @@
+<%= turbo_stream_from "live_scores" %>
 <div class="px-4 py-4"
      data-controller="auto-refresh"
      data-auto-refresh-game-times-value="<%= @games.map { |g| (g.game_date.to_f * 1000).to_i }.to_json %>">
@@ -66,13 +67,11 @@
               <% end %>
               <% if status == :live %>
                 <span class="ml-2 px-2 py-0.5 bg-red-500 text-white rounded-full text-[10px] font-bold animate-pulse">LIVE</span>
-              <% elsif status == :finished %>
-                <span class="ml-2 px-2 py-0.5 bg-gray-600 text-gray-300 rounded-full text-[10px]"><%= I18n.locale == :ko ? '종료' : 'Final' %></span>
               <% end %>
             </div>
 
             <!-- Teams with Edge & Spread -->
-            <div class="flex items-start">
+            <div id="game_<%= game.id %>" class="flex items-center">
               <!-- Away Team -->
               <div class="flex-1 text-center">
                 <div class="h-5 mb-1">
@@ -81,21 +80,43 @@
                   <% end %>
                 </div>
                 <div class="text-xl font-bold light:text-gray-900"><%= game.away_abbr %></div>
-                <div class="text-sm text-indigo-400 font-medium mt-1">
-                  <%= game.away_spread.present? ? (game.away_spread > 0 ? "+#{game.away_spread}" : game.away_spread) : "-" %>
-                </div>
+                <% if status == :live || status == :finished %>
+                  <div class="text-2xl font-bold <%= status == :live ? 'text-yellow-400' : 'text-gray-400' %> mt-1">
+                    <%= game.away_score || 0 %>
+                  </div>
+                <% else %>
+                  <div class="text-sm text-indigo-400 font-medium mt-1">
+                    <%= game.away_spread.present? ? (game.away_spread > 0 ? "+#{game.away_spread}" : game.away_spread) : "-" %>
+                  </div>
+                <% end %>
                 <% if game.away_record.present? %>
                   <div class="text-[10px] text-gray-500 mt-1"><%= game.away_record %></div>
                 <% end %>
               </div>
 
-              <!-- VS / Total -->
-              <div class="px-3 text-center">
-                <div class="h-5 mb-1"></div>
-                <div class="text-gray-600">@</div>
-                <div class="text-xs text-gray-500 mt-1">
-                  <%= game.total_line.present? ? "O/U #{game.total_line}" : "-" %>
-                </div>
+              <!-- VS / Total / Clock -->
+              <div class="px-3 text-center w-16">
+                <% if status == :live %>
+                  <div class="text-yellow-400 font-bold text-sm">
+                    Q<%= game.period || '-' %>
+                  </div>
+                  <div class="text-yellow-400 text-xs mt-1">
+                    <%= game.clock || '-' %>
+                  </div>
+                <% elsif status == :finished %>
+                  <div class="text-gray-500 text-sm"><%= I18n.locale == :ko ? '종료' : 'Final' %></div>
+                <% else %>
+                  <div class="text-gray-500 text-sm">
+                    <% if I18n.locale == :ko %>
+                      <%= game.game_date.in_time_zone("Asia/Seoul").strftime("%H:%M") %>
+                    <% else %>
+                      <%= game.game_date.in_time_zone("America/New_York").strftime("%I:%M") %>
+                    <% end %>
+                  </div>
+                  <div class="text-xs text-gray-600 mt-1">
+                    <%= game.total_line.present? ? "O/U #{game.total_line}" : "-" %>
+                  </div>
+                <% end %>
               </div>
 
               <!-- Home Team -->
@@ -106,9 +127,15 @@
                   <% end %>
                 </div>
                 <div class="text-xl font-bold light:text-gray-900"><%= game.home_abbr %></div>
-                <div class="text-sm text-indigo-400 font-medium mt-1">
-                  <%= game.home_spread.present? ? (game.home_spread > 0 ? "+#{game.home_spread}" : game.home_spread) : "-" %>
-                </div>
+                <% if status == :live || status == :finished %>
+                  <div class="text-2xl font-bold <%= status == :live ? 'text-yellow-400' : 'text-gray-400' %> mt-1">
+                    <%= game.home_score || 0 %>
+                  </div>
+                <% else %>
+                  <div class="text-sm text-indigo-400 font-medium mt-1">
+                    <%= game.home_spread.present? ? (game.home_spread > 0 ? "+#{game.home_spread}" : game.home_spread) : "-" %>
+                  </div>
+                <% end %>
                 <% if game.home_record.present? %>
                   <div class="text-[10px] text-gray-500 mt-1"><%= game.home_record %></div>
                 <% end %>

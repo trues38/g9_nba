@@ -1,0 +1,35 @@
+<div class="min-h-screen flex items-center justify-center bg-gray-900">
+  <div class="max-w-md w-full mx-4">
+    <div class="bg-gray-800 rounded-xl p-8 border border-gray-700">
+      <div class="text-center mb-8">
+        <h1 class="text-2xl font-bold text-white">G9 Admin</h1>
+        <p class="text-gray-400 mt-2">Enter password to continue</p>
+      </div>
+
+      <% if flash[:alert] %>
+        <div class="mb-4 p-3 bg-red-600/20 border border-red-600 rounded-lg text-red-400 text-sm">
+          <%= flash[:alert] %>
+        </div>
+      <% end %>
+
+      <%= form_with url: admin_login_path, method: :post, class: "space-y-6" do |f| %>
+        <div>
+          <label class="block text-sm font-medium text-gray-300 mb-2">Password</label>
+          <%= password_field_tag :password, nil,
+              class: "w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-white",
+              placeholder: "Enter admin password",
+              autofocus: true %>
+        </div>
+
+        <div>
+          <%= submit_tag "Login",
+              class: "w-full px-4 py-3 bg-indigo-600 hover:bg-indigo-700 rounded-lg font-medium text-white cursor-pointer transition" %>
+        </div>
+      <% end %>
+    </div>
+
+    <p class="text-center text-gray-600 text-sm mt-4">
+      G9 Sports Intelligence
+    </p>
+  </div>
+</div>
