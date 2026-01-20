@@ -10,7 +10,30 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_01_18_110000) do
+ActiveRecord::Schema[8.1].define(version: 2026_01_20_000000) do
+  create_table "game_results", force: :cascade do |t|
+    t.integer "away_score"
+    t.decimal "closing_spread", precision: 4, scale: 1
+    t.decimal "closing_total", precision: 5, scale: 1
+    t.datetime "created_at", null: false
+    t.integer "game_id", null: false
+    t.integer "home_score"
+    t.datetime "lines_captured_at"
+    t.integer "margin"
+    t.decimal "opening_spread", precision: 4, scale: 1
+    t.decimal "opening_total", precision: 5, scale: 1
+    t.datetime "result_captured_at"
+    t.boolean "spread_covered_home"
+    t.string "spread_result"
+    t.boolean "total_over"
+    t.string "total_result"
+    t.datetime "updated_at", null: false
+    t.index ["game_id"], name: "index_game_results_on_game_id"
+    t.index ["lines_captured_at"], name: "index_game_results_on_lines_captured_at"
+    t.index ["spread_result"], name: "index_game_results_on_spread_result"
+    t.index ["total_result"], name: "index_game_results_on_total_result"
+  end
+
   create_table "games", force: :cascade do |t|
     t.string "away_abbr"
     t.string "away_edge"
@@ -86,6 +109,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_01_18_110000) do
     t.datetime "result_recorded_at"
     t.decimal "stake", default: "1.0"
     t.string "status"
+    t.json "structured_data"
     t.string "title"
     t.datetime "updated_at", null: false
     t.index ["free"], name: "index_reports_on_free"
@@ -108,6 +132,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_01_18_110000) do
     t.datetime "updated_at", null: false
   end
 
+  add_foreign_key "game_results", "games"
   add_foreign_key "games", "sports"
   add_foreign_key "insights", "sports"
   add_foreign_key "reports", "games"
