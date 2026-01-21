@@ -1,5 +1,6 @@
 class Report < ApplicationRecord
   belongs_to :game
+  has_many :analyst_picks, dependent: :destroy
 
   validates :content, presence: true
 
