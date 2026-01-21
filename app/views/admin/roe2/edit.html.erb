@@ -1,0 +1,161 @@
+<div class="flex items-center justify-between mb-6">
+  <h1 class="text-2xl font-bold">Review & Upload</h1>
+  <%= link_to "← New URL", new_admin_roe2_path, class: "text-gray-400 hover:text-white text-sm" %>
+</div>
+
+<!-- 추출된 콘텐츠 -->
+<div class="mb-6 p-4 bg-gray-800 rounded-xl border border-gray-700">
+  <div class="flex items-start justify-between mb-3">
+    <h2 class="font-semibold text-lg"><%= @extracted[:title] %></h2>
+    <span class="px-2 py-1 bg-green-600/30 text-green-400 rounded text-xs">Extracted</span>
+  </div>
+
+  <div class="text-sm text-gray-400 space-y-1 mb-3">
+    <p><strong>Channel:</strong> <%= @extracted[:channel] %></p>
+    <p><strong>Duration:</strong> <%= @extracted[:duration] %></p>
+    <p><strong>Views:</strong> <%= number_with_delimiter(@extracted[:views]) %></p>
+  </div>
+
+  <% if @extracted[:description].present? %>
+    <div class="mt-3 p-3 bg-gray-900 rounded-lg">
+      <p class="text-xs text-gray-500 mb-1">Description:</p>
+      <p class="text-sm text-gray-300 whitespace-pre-wrap max-h-40 overflow-y-auto"><%= @extracted[:description] %></p>
+    </div>
+  <% end %>
+</div>
+
+<!-- 인사이트 입력 폼 -->
+<%= form_tag admin_roe2_index_path, method: :post do %>
+  <input type="hidden" name="source_url" value="<%= @extracted[:url] %>">
+  <input type="hidden" name="source_title" value="<%= @extracted[:title] %>">
+
+  <!-- NarrativeContext -->
+  <div class="mb-6 p-4 bg-gray-800 rounded-xl border border-gray-700">
+    <h3 class="font-semibold mb-4 text-indigo-400">NarrativeContext (서사)</h3>
+
+    <div id="narrative-contexts" class="space-y-4">
+      <div class="narrative-item p-4 bg-gray-900 rounded-lg border border-gray-600">
+        <div class="grid grid-cols-2 gap-4 mb-3">
+          <div>
+            <label class="block text-xs text-gray-400 mb-1">Type</label>
+            <select name="narrative_contexts[][type]" class="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded text-sm">
+              <option value="">Select type...</option>
+              <option value="Star Absence Impact">Star Absence Impact</option>
+              <option value="Player Emergence">Player Emergence</option>
+              <option value="Star Leadership">Star Leadership</option>
+              <option value="Schedule Context">Schedule Context</option>
+              <option value="Revenge Game">Revenge Game</option>
+              <option value="Milestone">Milestone</option>
+              <option value="Injury Return">Injury Return</option>
+              <option value="Team Chemistry">Team Chemistry</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs text-gray-400 mb-1">Team</label>
+            <select name="narrative_contexts[][team]" class="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded text-sm">
+              <option value="">Select team...</option>
+              <% @teams.each do |team| %>
+                <option value="<%= team %>"><%= team %></option>
+              <% end %>
+            </select>
+          </div>
+        </div>
+
+        <div class="mb-3">
+          <label class="block text-xs text-gray-400 mb-1">Player (optional)</label>
+          <input type="text" name="narrative_contexts[][player]" placeholder="e.g., Nikola Jokic" class="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded text-sm">
+        </div>
+
+        <div>
+          <label class="block text-xs text-gray-400 mb-1">Description</label>
+          <textarea name="narrative_contexts[][description]" rows="2" placeholder="인사이트 설명..." class="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded text-sm"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <button type="button" onclick="addNarrativeContext()" class="mt-3 px-3 py-1 text-sm text-indigo-400 hover:text-indigo-300 border border-indigo-600 rounded">
+      + Add NarrativeContext
+    </button>
+  </div>
+
+  <!-- TacticalConcept -->
+  <div class="mb-6 p-4 bg-gray-800 rounded-xl border border-gray-700">
+    <h3 class="font-semibold mb-4 text-purple-400">TacticalConcept (전술)</h3>
+
+    <div id="tactical-concepts" class="space-y-4">
+      <div class="tactical-item p-4 bg-gray-900 rounded-lg border border-gray-600">
+        <div class="grid grid-cols-2 gap-4 mb-3">
+          <div>
+            <label class="block text-xs text-gray-400 mb-1">Name</label>
+            <input type="text" name="tactical_concepts[][name]" placeholder="e.g., Gap Defense" class="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded text-sm">
+          </div>
+          <div>
+            <label class="block text-xs text-gray-400 mb-1">Category</label>
+            <select name="tactical_concepts[][category]" class="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded text-sm">
+              <option value="">Select category...</option>
+              <option value="OFFENSE">OFFENSE</option>
+              <option value="DEFENSE">DEFENSE</option>
+              <option value="TRANSITION">TRANSITION</option>
+              <option value="ROSTER_MANAGEMENT">ROSTER_MANAGEMENT</option>
+              <option value="SPECIAL">SPECIAL</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4 mb-3">
+          <div>
+            <label class="block text-xs text-gray-400 mb-1">Team (optional)</label>
+            <select name="tactical_concepts[][team]" class="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded text-sm">
+              <option value="">Select team...</option>
+              <% @teams.each do |team| %>
+                <option value="<%= team %>"><%= team %></option>
+              <% end %>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs text-gray-400 mb-1">Player (optional)</label>
+            <input type="text" name="tactical_concepts[][player]" placeholder="e.g., Shai Gilgeous-Alexander" class="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded text-sm">
+          </div>
+        </div>
+
+        <div class="mb-3">
+          <label class="block text-xs text-gray-400 mb-1">Description</label>
+          <textarea name="tactical_concepts[][description]" rows="2" placeholder="전술 설명..." class="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded text-sm"></textarea>
+        </div>
+
+        <div>
+          <label class="block text-xs text-gray-400 mb-1">Mechanism (작동 원리)</label>
+          <textarea name="tactical_concepts[][mechanism]" rows="2" placeholder="어떻게 작동하는지..." class="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded text-sm"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <button type="button" onclick="addTacticalConcept()" class="mt-3 px-3 py-1 text-sm text-purple-400 hover:text-purple-300 border border-purple-600 rounded">
+      + Add TacticalConcept
+    </button>
+  </div>
+
+  <!-- Submit -->
+  <div class="flex gap-3">
+    <button type="submit" class="flex-1 px-4 py-3 bg-indigo-600 hover:bg-indigo-700 rounded-lg font-medium transition">
+      Upload to Neo4j →
+    </button>
+    <%= link_to "Cancel", admin_roe2_index_path, class: "px-4 py-3 bg-gray-700 hover:bg-gray-600 rounded-lg font-medium text-center" %>
+  </div>
+<% end %>
+
+<script>
+function addNarrativeContext() {
+  const container = document.getElementById('narrative-contexts');
+  const template = container.querySelector('.narrative-item').cloneNode(true);
+  template.querySelectorAll('input, textarea, select').forEach(el => el.value = '');
+  container.appendChild(template);
+}
+
+function addTacticalConcept() {
+  const container = document.getElementById('tactical-concepts');
+  const template = container.querySelector('.tactical-item').cloneNode(true);
+  template.querySelectorAll('input, textarea, select').forEach(el => el.value = '');
+  container.appendChild(template);
+}
+</script>

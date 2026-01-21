@@ -22,6 +22,13 @@ Rails.application.routes.draw do
     resources :insights
     resources :games, only: [:index, :show]
 
+    # ROE-2 YouTube Insights
+    resources :roe2, only: [:index, :new, :create] do
+      collection do
+        post :extract
+      end
+    end
+
     # Stats / Performance tracking
     get "stats", to: "stats#index"
     post "stats/record/:id", to: "stats#record_result", as: :record_result
