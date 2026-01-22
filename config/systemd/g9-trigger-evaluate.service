@@ -1,0 +1,18 @@
+[Unit]
+Description=Gate9 Trigger Evaluation (Post-game feedback)
+After=network.target docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+User=root
+WorkingDirectory=/root
+# First save results, then evaluate predictions
+ExecStart=/usr/bin/docker exec gate9_sports-web bin/rails nba:save_results
+ExecStart=/usr/bin/docker exec gate9_sports-web bin/rails report:evaluate
+ExecStart=/usr/bin/docker exec gate9_sports-web bin/rails weakness:sync_neo4j
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

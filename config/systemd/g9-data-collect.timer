@@ -1,0 +1,10 @@
+[Unit]
+Description=Gate9 Data Collection Timer - Daily at 5:30AM KST (20:30 UTC previous day)
+
+[Timer]
+# 매일 오전 5:30 KST (전날 20:30 UTC) - 보고서 생성 30분 전
+OnCalendar=*-*-* 20:30:00 UTC
+Persistent=true
+
+[Install]
+WantedBy=timers.target

@@ -1432,4 +1432,138 @@ namespace :nba do
       end
     end
   end
+
+  desc "Fetch advanced team stats (DEF RTG, OFF RTG, PACE) from NBA.com"
+  task fetch_advanced_stats: :environment do
+    require 'net/http'
+    require 'json'
+
+    puts "Fetching advanced team stats from NBA.com..."
+
+    # NBA.com Stats API endpoint
+    uri = URI("https://stats.nba.com/stats/leaguedashteamstats")
+    uri.query = URI.encode_www_form({
+      "Conference" => "",
+      "DateFrom" => "",
+      "DateTo" => "",
+      "Division" => "",
+      "GameScope" => "",
+      "GameSegment" => "",
+      "Height" => "",
+      "ISTRound" => "",
+      "LastNGames" => "0",
+      "LeagueID" => "00",
+      "Location" => "",
+      "MeasureType" => "Advanced",
+      "Month" => "0",
+      "OpponentTeamID" => "0",
+      "Outcome" => "",
+      "PORound" => "0",
+      "PaceAdjust" => "N",
+      "PerMode" => "PerGame",
+      "Period" => "0",
+      "PlayerExperience" => "",
+      "PlayerPosition" => "",
+      "PlusMinus" => "N",
+      "Rank" => "N",
+      "Season" => "2025-26",
+      "SeasonSegment" => "",
+      "SeasonType" => "Regular Season",
+      "ShotClockRange" => "",
+      "StarterBench" => "",
+      "TeamID" => "0",
+      "TwoWay" => "0",
+      "VsConference" => "",
+      "VsDivision" => ""
+    })
+
+    begin
+      http = Net::HTTP.new(uri.host, uri.port)
+      http.use_ssl = true
+      http.verify_mode = OpenSSL::SSL::VERIFY_NONE
+      http.read_timeout = 30
+
+      request = Net::HTTP::Get.new(uri)
+      # NBA.com requires specific headers
+      request["Host"] = "stats.nba.com"
+      request["User-Agent"] = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
+      request["Accept"] = "application/json"
+      request["Accept-Language"] = "en-US,en;q=0.9"
+      request["Referer"] = "https://www.nba.com/"
+      request["x-nba-stats-origin"] = "stats"
+      request["x-nba-stats-token"] = "true"
+
+      response = http.request(request)
+      data = JSON.parse(response.body)
+
+      headers = data.dig("resultSets", 0, "headers") || []
+      rows = data.dig("resultSets", 0, "rowSet") || []
+
+      # Build column index
+      col_idx = {}
+      headers.each_with_index { |h, i| col_idx[h] = i }
+
+      team_stats = {}
+
+      # NBA team ID to abbreviation mapping
+      nba_team_abbr = {
+        1610612737 => "ATL", 1610612738 => "BOS", 1610612751 => "BKN",
+        1610612766 => "CHA", 1610612741 => "CHI", 1610612739 => "CLE",
+        1610612742 => "DAL", 1610612743 => "DEN", 1610612765 => "DET",
+        1610612744 => "GSW", 1610612745 => "HOU", 1610612754 => "IND",
+        1610612746 => "LAC", 1610612747 => "LAL", 1610612763 => "MEM",
+        1610612748 => "MIA", 1610612749 => "MIL", 1610612750 => "MIN",
+        1610612740 => "NOP", 1610612752 => "NYK", 1610612760 => "OKC",
+        1610612753 => "ORL", 1610612755 => "PHI", 1610612756 => "PHX",
+        1610612757 => "POR", 1610612758 => "SAC", 1610612759 => "SAS",
+        1610612761 => "TOR", 1610612762 => "UTA", 1610612764 => "WAS"
+      }
+
+      rows.each do |row|
+        team_id = row[col_idx["TEAM_ID"]]
+        abbr = nba_team_abbr[team_id]
+        next unless abbr
+
+        team_stats[abbr] = {
+          "team_name" => row[col_idx["TEAM_NAME"]],
+          "off_rtg" => row[col_idx["OFF_RATING"]]&.round(1),
+          "def_rtg" => row[col_idx["DEF_RATING"]]&.round(1),
+          "net_rtg" => row[col_idx["NET_RATING"]]&.round(1),
+          "pace" => row[col_idx["PACE"]]&.round(1),
+          "ts_pct" => row[col_idx["TS_PCT"]]&.*(100)&.round(1),
+          "efg_pct" => row[col_idx["EFG_PCT"]]&.*(100)&.round(1),
+          "ast_ratio" => row[col_idx["AST_RATIO"]]&.round(1),
+          "reb_pct" => row[col_idx["REB_PCT"]]&.*(100)&.round(1),
+          "updated_at" => Time.current.iso8601
+        }
+      end
+
+      # Calculate rankings
+      off_ranked = team_stats.sort_by { |_, v| -(v["off_rtg"] || 0) }
+      def_ranked = team_stats.sort_by { |_, v| v["def_rtg"] || 999 }
+      pace_ranked = team_stats.sort_by { |_, v| -(v["pace"] || 0) }
+
+      off_ranked.each_with_index { |(abbr, _), i| team_stats[abbr]["off_rank"] = i + 1 }
+      def_ranked.each_with_index { |(abbr, _), i| team_stats[abbr]["def_rank"] = i + 1 }
+      pace_ranked.each_with_index { |(abbr, _), i| team_stats[abbr]["pace_rank"] = i + 1 }
+
+      # Save to cache
+      cache_path = Rails.root.join("tmp", "team_advanced_stats.json")
+      File.write(cache_path, JSON.pretty_generate(team_stats))
+
+      puts "Saved advanced stats for #{team_stats.count} teams to #{cache_path}"
+      puts "\nTop 5 Offense (OFF RTG):"
+      off_ranked.first(5).each { |abbr, s| puts "  #{s['off_rank']}. #{abbr}: #{s['off_rtg']}" }
+
+      puts "\nTop 5 Defense (DEF RTG - lower is better):"
+      def_ranked.first(5).each { |abbr, s| puts "  #{s['def_rank']}. #{abbr}: #{s['def_rtg']}" }
+
+      puts "\nTop 5 Pace:"
+      pace_ranked.first(5).each { |abbr, s| puts "  #{s['pace_rank']}. #{abbr}: #{s['pace']}" }
+
+    rescue => e
+      puts "Error: #{e.message}"
+      puts e.backtrace.first(5).join("\n")
+    end
+  end
 end

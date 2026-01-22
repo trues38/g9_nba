@@ -1,0 +1,16 @@
+[Unit]
+Description=Gate9 Data Collection (odds, stats, injuries)
+After=network.target docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+User=root
+WorkingDirectory=/root
+ExecStart=/usr/bin/docker exec gate9_sports-web bin/rails nba:fetch_all
+ExecStart=/usr/bin/docker exec gate9_sports-web bin/rails nba:fetch_advanced_stats
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

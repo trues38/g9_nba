@@ -1,0 +1,10 @@
+[Unit]
+Description=Gate9 Trigger Evaluation Timer - Daily at 2PM KST (05:00 UTC)
+
+[Timer]
+# 매일 오후 2시 KST (05:00 UTC) - 대부분 경기 종료 후
+OnCalendar=*-*-* 05:00:00 UTC
+Persistent=true
+
+[Install]
+WantedBy=timers.target
