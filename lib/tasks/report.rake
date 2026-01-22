@@ -1,6 +1,107 @@
 # frozen_string_literal: true
 
 namespace :report do
+  # LLM 기반 보고서 생성 (최종 템플릿 적용)
+  desc "Generate LLM-powered report for a single game"
+  task :generate_llm, [:game_id] => :environment do |_, args|
+    require 'json'
+
+    game = Game.find(args[:game_id])
+    puts "🤖 LLM 보고서 생성: #{game.away_abbr} @ #{game.home_abbr}"
+
+    # Load all data
+    advanced_stats = WeaknessPrediction.load_advanced_stats
+    team_trends = load_team_trends
+    analyst_weights = AnalystWeight.all.index_by(&:analyst_name)
+    global_triggers = fetch_global_triggers
+    team_regimes = fetch_team_regimes
+
+    # Detect triggers
+    WeaknessPrediction.detect_triggers_for_game(game)
+    preds = WeaknessPrediction.where(game: game)
+
+    # Build data for LLM
+    game_data = build_game_data(game, advanced_stats, team_trends, preds, global_triggers, team_regimes, analyst_weights)
+
+    # Generate with LLM
+    report_content = generate_with_llm(game_data)
+
+    if report_content
+      # Save to Report model
+      report = Report.find_or_initialize_by(game: game)
+      report.update!(
+        title: "#{game.away_abbr} @ #{game.home_abbr}: #{extract_pick_summary(report_content)}",
+        content: report_content,
+        pick: extract_pick(report_content),
+        confidence: extract_confidence(report_content),
+        status: 'published',
+        published_at: Time.current
+      )
+      puts "✅ 저장됨: Report ##{report.id}"
+      puts report_content
+    else
+      puts "❌ LLM 생성 실패"
+    end
+  end
+
+  desc "Generate LLM reports for all today's games with triggers"
+  task daily_llm: :environment do
+    require 'json'
+
+    today = Date.current
+    games = Game.where('DATE(game_date) = ?', today).order(:game_date)
+
+    if games.empty?
+      puts "오늘 경기 없음"
+      exit
+    end
+
+    # Load data once
+    advanced_stats = WeaknessPrediction.load_advanced_stats
+    team_trends = load_team_trends
+    analyst_weights = AnalystWeight.all.index_by(&:analyst_name)
+    global_triggers = fetch_global_triggers
+    team_regimes = fetch_team_regimes
+
+    # Detect triggers for all games
+    games.each { |g| WeaknessPrediction.detect_triggers_for_game(g) }
+
+    # Generate reports only for games with triggers
+    games_with_triggers = games.select { |g| WeaknessPrediction.where(game: g).exists? }
+
+    puts "📊 오늘 경기: #{games.count}개, 트리거 감지: #{games_with_triggers.count}개"
+    puts "=" * 60
+
+    games_with_triggers.each_with_index do |game, idx|
+      puts "\n[#{idx + 1}/#{games_with_triggers.count}] #{game.away_abbr} @ #{game.home_abbr}"
+
+      preds = WeaknessPrediction.where(game: game)
+      game_data = build_game_data(game, advanced_stats, team_trends, preds, global_triggers, team_regimes, analyst_weights)
+
+      report_content = generate_with_llm(game_data)
+
+      if report_content
+        report = Report.find_or_initialize_by(game: game)
+        report.update!(
+          title: "#{game.away_abbr} @ #{game.home_abbr}: #{extract_pick_summary(report_content)}",
+          content: report_content,
+          pick: extract_pick(report_content),
+          confidence: extract_confidence(report_content),
+          status: 'published',
+          published_at: Time.current
+        )
+        puts "  ✅ Report ##{report.id} 저장됨"
+      else
+        puts "  ❌ 생성 실패"
+      end
+
+      sleep 2 # Rate limiting
+    end
+
+    puts "\n" + "=" * 60
+    puts "✅ LLM 보고서 생성 완료"
+  end
+
   desc "Generate comprehensive daily analysis report (Neo4j + 5-Analyst + Triggers)"
   task daily: :environment do
     require 'json'
@@ -425,5 +526,232 @@ namespace :report do
     end
 
     picks
+  end
+
+  # LLM 보고서 생성 헬퍼 메서드들
+  def build_game_data(game, advanced_stats, team_trends, triggers, global_triggers, team_regimes, analyst_weights)
+    home_stats = advanced_stats[game.home_abbr] || {}
+    away_stats = advanced_stats[game.away_abbr] || {}
+    home_trends = team_trends[game.home_abbr] || {}
+    away_trends = team_trends[game.away_abbr] || {}
+
+    # Build trigger info
+    trigger_info = triggers.map do |t|
+      gt = global_triggers[t.trigger_type] || {}
+      {
+        type: t.trigger_type,
+        team: t.team,
+        detail: t.trigger_detail,
+        hit_rate: gt[:hit_rate] || 50,
+        signal: gt[:signal] || 'NEUTRAL'
+      }
+    end
+
+    # Best trigger signal
+    best_trigger = trigger_info.max_by { |t| t[:hit_rate] }
+    best_pick = nil
+    if best_trigger && best_trigger[:hit_rate] >= 60
+      best_pick = (best_trigger[:team] == game.home_team) ? game.away_abbr : game.home_abbr
+    end
+
+    # Team weaknesses from Neo4j
+    home_weaknesses = team_regimes[game.home_team] || []
+    away_weaknesses = team_regimes[game.away_team] || []
+
+    # Generate analyst picks
+    analyst_picks = generate_analyst_picks(game, home_stats, away_stats, home_trends, away_trends, triggers)
+
+    {
+      game: {
+        away: game.away_abbr,
+        home: game.home_abbr,
+        date: game.game_date.in_time_zone('Asia/Seoul').strftime('%Y-%m-%d'),
+        time: game.game_date.in_time_zone('Asia/Seoul').strftime('%H:%M'),
+        spread: game.home_spread,
+        total: game.total_line,
+        venue: game.venue || 'TBD'
+      },
+      triggers: trigger_info,
+      best_trigger: best_trigger,
+      best_pick: best_pick,
+      team_stats: {
+        home: {
+          record: home_trends['record'] || 'N/A',
+          streak: home_trends['current_streak'] || 'N/A',
+          off_rtg: home_stats['off_rtg'],
+          off_rank: home_stats['off_rank'],
+          def_rtg: home_stats['def_rtg'],
+          def_rank: home_stats['def_rank'],
+          net_rtg: home_stats['net_rtg'],
+          ats: home_trends.dig('ats', 'record') || 'N/A'
+        },
+        away: {
+          record: away_trends['record'] || 'N/A',
+          streak: away_trends['current_streak'] || 'N/A',
+          off_rtg: away_stats['off_rtg'],
+          off_rank: away_stats['off_rank'],
+          def_rtg: away_stats['def_rtg'],
+          def_rank: away_stats['def_rank'],
+          net_rtg: away_stats['net_rtg'],
+          ats: away_trends.dig('ats', 'record') || 'N/A'
+        }
+      },
+      team_weaknesses: {
+        home: home_weaknesses,
+        away: away_weaknesses
+      },
+      analyst_picks: analyst_picks,
+      analyst_weights: analyst_weights.transform_values do |aw|
+        { weight: aw.weight, signal_type: aw.signal_type, accuracy: aw.accuracy }
+      end
+    }
+  end
+
+  def generate_with_llm(game_data)
+    client = OpenRouterClient.new
+
+    system_prompt = build_system_prompt
+    user_prompt = build_user_prompt(game_data)
+
+    result = client.chat(user_prompt, system: system_prompt)
+
+    # Clean up response
+    result.strip
+  rescue => e
+    puts "  ⚠️ LLM Error: #{e.message}"
+    nil
+  end
+
+  def build_system_prompt
+    <<~PROMPT
+      You are G9 Sports Intelligence report generator.
+
+      STRICT RULES:
+      1. Generate reports in Korean
+      2. Follow this EXACT structure:
+         - HEADER: # {AWAY} @ {HOME} with date, time, spread
+         - TRIGGER SIGNAL: Most important - show in box format with hit rate
+         - TEAM COMPARISON: Table with OFF/DEF ratings, records
+         - ANALYST PANEL: Table with 5 analysts, picks, confidence, weights
+         - FINAL VERDICT: Box format with PICK, trigger, consensus, stake
+
+      3. Trigger signal box format:
+         ╔═══════════════════════════════════════════════════════════╗
+         ║  🔥 **{TRIGGER_TYPE}** 감지                               ║
+         ║  {WEAK_TEAM}: 약한 {TYPE} vs {STRONG_TEAM}: 엘리트 {TYPE} ║
+         ║  📊 백테스트 히트율: **{HIT_RATE}%** [{SIGNAL}]           ║
+         ║  📌 추천: **{PICK}** 승리 유리                            ║
+         ╚═══════════════════════════════════════════════════════════╝
+
+      4. Analyst weights (RALPH system):
+         - CONTRARIAN (+1.0): main signal
+         - SYSTEM (+0.7): secondary signal
+         - SCOUT (0.0): neutral
+         - MOMENTUM (-0.3): reverse indicator
+         - SHARP (-0.5): reverse indicator
+
+      5. Final verdict box format:
+         ╔═══════════════════════════════════════════════════════════╗
+         ║   📌 PICK: **{PICK}**                                     ║
+         ║   🎯 트리거 시그널: {TRIGGER} ({HIT_RATE}%)               ║
+         ║   👥 패널 합의: {N}/5 ({STARS})                           ║
+         ║   Bet Type: {TYPE}  Stake: {STAKE}                        ║
+         ║   💬 "{ONE_LINE_SUMMARY}"                                 ║
+         ╚═══════════════════════════════════════════════════════════╝
+
+      6. Stake guidelines:
+         - Trigger 70%+ AND 4/5+ consensus: 2u
+         - Trigger 60%+ AND 4/5+ consensus: 1.5u
+         - Trigger 60%+ OR 4/5+ consensus: 1u
+         - 3/5 consensus: 0.5u
+         - 2/5 or less: PASS
+
+      7. Use markdown formatting with emoji
+      8. Be concise but informative
+    PROMPT
+  end
+
+  def build_user_prompt(data)
+    triggers_text = data[:triggers].map do |t|
+      "- #{t[:type]} on #{t[:team]}: #{t[:detail]} (#{t[:hit_rate]}% [#{t[:signal]}])"
+    end.join("\n")
+
+    analyst_text = data[:analyst_picks].map do |name, pick|
+      weight = data[:analyst_weights][name]
+      w_str = weight ? "(#{weight[:weight] > 0 ? '+' : ''}#{weight[:weight]})" : ""
+      "- #{name} #{w_str}: #{pick[:pick]} - #{pick[:reason]}"
+    end.join("\n")
+
+    <<~PROMPT
+      Generate a G9 Sports Intelligence report for this game:
+
+      ## Game Info
+      #{data[:game][:away]} @ #{data[:game][:home]}
+      Date: #{data[:game][:date]} #{data[:game][:time]} KST
+      Spread: #{data[:game][:home]} #{data[:game][:spread]}
+      Total: #{data[:game][:total]}
+
+      ## Detected Triggers
+      #{triggers_text.presence || "No triggers detected"}
+
+      ## Best Trigger Signal
+      #{data[:best_trigger] ? "#{data[:best_trigger][:type]} (#{data[:best_trigger][:hit_rate]}%) → Pick: #{data[:best_pick]}" : "None"}
+
+      ## Team Stats
+      #{data[:game][:away]}:
+      - Record: #{data[:team_stats][:away][:record]}
+      - Streak: #{data[:team_stats][:away][:streak]}
+      - OFF RTG: ##{data[:team_stats][:away][:off_rank]} (#{data[:team_stats][:away][:off_rtg]})
+      - DEF RTG: ##{data[:team_stats][:away][:def_rank]} (#{data[:team_stats][:away][:def_rtg]})
+      - NET RTG: #{data[:team_stats][:away][:net_rtg]}
+
+      #{data[:game][:home]}:
+      - Record: #{data[:team_stats][:home][:record]}
+      - Streak: #{data[:team_stats][:home][:streak]}
+      - OFF RTG: ##{data[:team_stats][:home][:off_rank]} (#{data[:team_stats][:home][:off_rtg]})
+      - DEF RTG: ##{data[:team_stats][:home][:def_rank]} (#{data[:team_stats][:home][:def_rtg]})
+      - NET RTG: #{data[:team_stats][:home][:net_rtg]}
+
+      ## Team Weaknesses (Neo4j)
+      #{data[:game][:away]}: #{data[:team_weaknesses][:away].map { |w| "#{w['trigger']} (#{w['hit_rate']}%)" }.join(', ').presence || 'None'}
+      #{data[:game][:home]}: #{data[:team_weaknesses][:home].map { |w| "#{w['trigger']} (#{w['hit_rate']}%)" }.join(', ').presence || 'None'}
+
+      ## Analyst Picks (RALPH System)
+      #{analyst_text}
+
+      ---
+      Generate the complete report following the template exactly. Focus on the trigger signal as the main decision factor.
+    PROMPT
+  end
+
+  def extract_pick(content)
+    # Look for PICK: **XXX** pattern
+    match = content.match(/PICK:\s*\*\*([A-Z]{2,3})\*\*/i)
+    match ? match[1].upcase : nil
+  end
+
+  def extract_confidence(content)
+    # Look for hit rate percentage
+    match = content.match(/(\d{2,3})%/)
+    return 5 if match && match[1].to_i >= 80
+    return 4 if match && match[1].to_i >= 70
+    return 3 if match && match[1].to_i >= 60
+    2
+  end
+
+  def extract_pick_summary(content)
+    # Try to extract trigger type and hit rate
+    trigger_match = content.match(/🔥\s*\*\*([A-Z_]+)\*\*|✅\s*\*\*([A-Z_]+)\*\*/)
+    rate_match = content.match(/히트율:\s*\*\*(\d+\.?\d*)%\*\*|(\d+)%\s*\[STRONG\]/)
+
+    trigger = trigger_match ? (trigger_match[1] || trigger_match[2]) : nil
+    rate = rate_match ? (rate_match[1] || rate_match[2]) : nil
+
+    if trigger && rate
+      trigger_short = trigger.gsub('BAD_MATCHUP_', '').gsub('_', ' ').capitalize
+      "#{trigger_short} 시그널 (#{rate}%)"
+    else
+      "분석 보고서"
+    end
   end
 end
