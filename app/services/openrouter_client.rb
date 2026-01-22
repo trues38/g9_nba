@@ -8,7 +8,7 @@
 #   result[:narratives]  # NarrativeContext 배열
 #   result[:tactics]     # TacticalConcept 배열
 #
-class OpenRouterClient
+class OpenrouterClient
   require "net/http"
   require "uri"
   require "json"

@@ -608,18 +608,203 @@ namespace :report do
   end
 
   def generate_with_llm(game_data)
-    client = OpenRouterClient.new
+    # Try LLM first, fallback to template-based
+    if ENV['OPENROUTER_API_KEY'].present?
+      client = OpenrouterClient.new
+      system_prompt = build_system_prompt
+      user_prompt = build_user_prompt(game_data)
+      result = client.chat(user_prompt, system: system_prompt)
+      return result.strip if result.present?
+    end
 
-    system_prompt = build_system_prompt
-    user_prompt = build_user_prompt(game_data)
-
-    result = client.chat(user_prompt, system: system_prompt)
-
-    # Clean up response
-    result.strip
+    # Fallback: Generate report using template directly
+    generate_template_report(game_data)
   rescue => e
-    puts "  ⚠️ LLM Error: #{e.message}"
-    nil
+    puts "  ⚠️ LLM Error: #{e.message}, using template fallback"
+    generate_template_report(game_data)
+  end
+
+  def generate_template_report(data)
+    g = data[:game]
+    triggers = data[:triggers]
+    best_trigger = data[:best_trigger]
+    picks = data[:analyst_picks]
+
+    report = []
+
+    # HEADER
+    report << "# #{g[:away]} @ #{g[:home]}"
+    report << ""
+    report << "📅 #{g[:date]} #{g[:time]} KST"
+    if g[:spread]
+      report << "📈 #{g[:home]} #{g[:spread] > 0 ? '+' : ''}#{g[:spread]} | O/U #{g[:total]}"
+    end
+    report << ""
+    report << "---"
+    report << ""
+
+    # TRIGGER SIGNAL
+    report << "## 🎯 트리거 시그널"
+    report << ""
+
+    if best_trigger && best_trigger[:hit_rate] >= 60
+      emoji = best_trigger[:signal] == 'STRONG' ? '🔥' : '✅'
+      weak_team = best_trigger[:team]
+      strong_team = (weak_team == g[:home]) ? g[:away] : g[:home]
+
+      report << "╔═══════════════════════════════════════════════════════════╗"
+      report << "║  #{emoji} **#{best_trigger[:type]}** 감지"
+      report << "║  ─────────────────────────────────────────────────────"
+      report << "║  #{weak_team}: #{best_trigger[:detail]}"
+      report << "║"
+      report << "║  📊 백테스트 히트율: **#{best_trigger[:hit_rate]}%** [#{best_trigger[:signal]}]"
+      report << "║  📌 추천: **#{data[:best_pick]}** 승리 유리"
+      report << "╚═══════════════════════════════════════════════════════════╝"
+    else
+      report << "ℹ️ 이 경기에서 유의미한 트리거가 감지되지 않았습니다."
+      report << "→ 분석가 패널 의견을 참고하세요."
+    end
+
+    # Additional triggers
+    other_triggers = triggers.select { |t| t != best_trigger && t[:hit_rate] >= 50 }
+    if other_triggers.any?
+      report << ""
+      report << "### 추가 감지 트리거"
+      other_triggers.each do |t|
+        emoji = t[:signal] == 'STRONG' ? '🔥' : (t[:signal] == 'MODERATE' ? '✅' : '➖')
+        report << "- #{emoji} **#{t[:type]}** on #{t[:team]} (#{t[:hit_rate]}%)"
+      end
+    end
+
+    report << ""
+    report << "---"
+    report << ""
+
+    # TEAM COMPARISON
+    report << "## 📊 팀 비교"
+    report << ""
+    report << "| 항목 | #{g[:away]} | #{g[:home]} |"
+    report << "|------|--------|--------|"
+    report << "| **전적** | #{data[:team_stats][:away][:record]} | #{data[:team_stats][:home][:record]} |"
+    report << "| **최근 5경기** | #{data[:team_stats][:away][:streak]} | #{data[:team_stats][:home][:streak]} |"
+    report << "| **OFF RTG** | ##{data[:team_stats][:away][:off_rank]} (#{data[:team_stats][:away][:off_rtg]}) | ##{data[:team_stats][:home][:off_rank]} (#{data[:team_stats][:home][:off_rtg]}) |"
+    report << "| **DEF RTG** | ##{data[:team_stats][:away][:def_rank]} (#{data[:team_stats][:away][:def_rtg]}) | ##{data[:team_stats][:home][:def_rank]} (#{data[:team_stats][:home][:def_rtg]}) |"
+    report << "| **NET RTG** | #{data[:team_stats][:away][:net_rtg]} | #{data[:team_stats][:home][:net_rtg]} |"
+
+    # Team weaknesses
+    if data[:team_weaknesses][:away].any? || data[:team_weaknesses][:home].any?
+      report << ""
+      report << "### 검증된 팀 약점 (Neo4j)"
+      data[:team_weaknesses][:away].each do |w|
+        report << "- #{g[:away]}: #{w['trigger']} (#{w['hit_rate']}%)"
+      end
+      data[:team_weaknesses][:home].each do |w|
+        report << "- #{g[:home]}: #{w['trigger']} (#{w['hit_rate']}%)"
+      end
+    end
+
+    report << ""
+    report << "---"
+    report << ""
+
+    # ANALYST PANEL
+    report << "## 👥 분석가 패널"
+    report << ""
+    report << "| 분석가 | 픽 | 핵심 논거 | 가중치 |"
+    report << "|--------|-----|-----------|--------|"
+
+    analyst_order = %w[CONTRARIAN SYSTEM SCOUT MOMENTUM SHARP]
+    analyst_icons = { 'CONTRARIAN' => '🔄', 'SYSTEM' => '⚙️', 'SCOUT' => '👁️', 'MOMENTUM' => '📈', 'SHARP' => '📊' }
+    analyst_weights_display = { 'CONTRARIAN' => '+1.0', 'SYSTEM' => '+0.7', 'SCOUT' => '0.0', 'MOMENTUM' => '-0.3', 'SHARP' => '-0.5' }
+
+    analyst_order.each do |name|
+      pick_data = picks[name]
+      next unless pick_data
+      icon = analyst_icons[name]
+      weight = analyst_weights_display[name]
+      report << "| #{icon} **#{name}** | #{pick_data[:pick]} | #{pick_data[:reason]} | #{weight} |"
+    end
+
+    # Consensus calculation
+    picks_home = picks.count { |_, v| v[:pick] == g[:home] }
+    picks_away = picks.count { |_, v| v[:pick] == g[:away] }
+    consensus = [picks_home, picks_away].max
+    consensus_pick = picks_home >= picks_away ? g[:home] : g[:away]
+
+    report << ""
+    report << "### 패널 컨센서스"
+    report << "- **합의**: #{consensus}/5 분석가 #{consensus_pick} 동의"
+
+    report << ""
+    report << "---"
+    report << ""
+
+    # FINAL VERDICT
+    report << "## 🏆 Final Verdict"
+    report << ""
+
+    final_pick = data[:best_pick] || consensus_pick
+    trigger_info = best_trigger ? "#{best_trigger[:type]} (#{best_trigger[:hit_rate]}%)" : "없음"
+
+    # Determine stake
+    stake = if best_trigger && best_trigger[:hit_rate] >= 70 && consensus >= 4
+              "2u"
+            elsif best_trigger && best_trigger[:hit_rate] >= 60 && consensus >= 4
+              "1.5u"
+            elsif best_trigger && best_trigger[:hit_rate] >= 60
+              "1u"
+            elsif consensus >= 3
+              "0.5u"
+            else
+              "PASS"
+            end
+
+    confidence = best_trigger && best_trigger[:hit_rate] >= 70 ? "HIGH" : (best_trigger && best_trigger[:hit_rate] >= 60 ? "MEDIUM" : "LOW")
+
+    if stake == "PASS" || consensus < 3
+      report << "╔═══════════════════════════════════════════════════════════╗"
+      report << "║                                                           ║"
+      report << "║   📌 PICK: **PASS**                                       ║"
+      report << "║                                                           ║"
+      report << "║   ─────────────────────────────────────────────────────   ║"
+      report << "║                                                           ║"
+      report << "║   ❌ PASS 사유:                                           ║"
+      report << "║   • 확실한 엣지 부족                                      ║"
+      report << "║   • 패널 합의 부족 (#{consensus}/5)                          ║"
+      report << "║                                                           ║"
+      report << "║   Bet Type: NO BET                                        ║"
+      report << "║   Stake: 0u                                               ║"
+      report << "║                                                           ║"
+      report << "╚═══════════════════════════════════════════════════════════╝"
+    else
+      report << "╔═══════════════════════════════════════════════════════════╗"
+      report << "║                                                           ║"
+      report << "║   📌 PICK: **#{final_pick}**"
+      report << "║                                                           ║"
+      report << "║   ─────────────────────────────────────────────────────   ║"
+      report << "║                                                           ║"
+      report << "║   🎯 트리거 시그널: #{trigger_info}"
+      report << "║   👥 패널 합의: #{consensus}/5"
+      report << "║   ⚖️ 가중 신뢰도: #{confidence}"
+      report << "║                                                           ║"
+      report << "║   ─────────────────────────────────────────────────────   ║"
+      report << "║                                                           ║"
+      report << "║   Bet Type: Spread                                        ║"
+      report << "║   Stake: #{stake}"
+      report << "║                                                           ║"
+      report << "╚═══════════════════════════════════════════════════════════╝"
+    end
+
+    report << ""
+    report << "---"
+    report << ""
+    report << "*G9 Sports Intelligence*"
+    report << "*Neo4j 트리거 시스템 + 5인 분석가 RALPH*"
+    report << "*Generated: #{Time.current.in_time_zone('Asia/Seoul').strftime('%Y-%m-%d %H:%M')} KST*"
+    report << ""
+    report << "⚠️ 백테스트 기반 참고용 분석입니다. 최종 베팅 결정은 본인 책임입니다."
+
+    report.join("\n")
   end
 
   def build_system_prompt
