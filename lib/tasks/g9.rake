@@ -357,7 +357,7 @@ namespace :g9 do
       date_str = game.game_date.strftime('%Y%m%d')
 
       # Neo4j Game 노드 업데이트
-      client.query(<<~CYPHER, {
+      params = {
         date: date_str,
         home: game.home_abbr,
         away: game.away_abbr,
@@ -367,7 +367,9 @@ namespace :g9 do
         closing_total: result.closing_total&.to_f,
         spread_result: result.spread_result,
         total_result: result.total_result
-      })
+      }
+
+      client.query(<<~CYPHER, params)
         MATCH (g:Game)
         WHERE g.date = $date AND g.home_team = $home AND g.away_team = $away
         SET g.spread = $spread,
