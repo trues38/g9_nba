@@ -1,0 +1,25 @@
+[Unit]
+Description=Gate9 Lines/Results Sync (SQLite → Neo4j)
+After=network.target docker.service g9-data-collect.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+User=root
+WorkingDirectory=/root
+
+# 1. SQLite → Neo4j 라인 동기화
+ExecStart=/usr/bin/docker exec gate9_sports-web bin/rails g9:sync_lines
+
+# 2. ATS/O-U 통계 업데이트
+ExecStart=/usr/bin/docker exec gate9_sports-web bin/rails g9:sync_ats
+
+# 3. TeamRegime flow_state 업데이트
+ExecStart=/usr/bin/docker exec gate9_sports-web bin/rails g9:update_regime
+
+StandardOutput=journal
+StandardError=journal
+TimeoutStartSec=300
+
+[Install]
+WantedBy=multi-user.target
